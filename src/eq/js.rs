@@ -108,7 +108,7 @@ impl<'a> CanvasEqRenderer {
         })
     }
 
-    pub fn render_grid_to_canvas(&self, eq: &EQ) {
+    pub fn render_grid_to_canvas(&self, eq: &EqModel) {
         let context = &self.context;
 
         let width = self.geometry.width;
@@ -156,7 +156,7 @@ impl<'a> CanvasEqRenderer {
         context.stroke();
     }
 
-    pub fn render_to_canvas(&self, eq: &EQ) {
+    pub fn render_to_canvas(&self, eq: &EqModel) {
         let width = self.geometry.width;
         let height = self.geometry.height;
 

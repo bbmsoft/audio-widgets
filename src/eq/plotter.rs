@@ -11,7 +11,7 @@ const COEFFS: [[f64; 6]; 7] = [
     [1.4142f64, 1.4142f64, 0f64, 1f64, 1f64, 0f64],
 ];
 
-pub fn plot_eq(eq: &EQ, width: f64, height: f64, invert_y: bool) -> EqGraph {
+pub fn plot_eq(eq: &EqModel, width: f64, height: f64, invert_y: bool) -> EqGraph {
     let x_conv = eq.x_to_frequency_converter(width);
     let y_conv = eq.y_to_gain_converter(height, invert_y);
 

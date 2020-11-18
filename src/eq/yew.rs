@@ -1,7 +1,7 @@
 use crate::eq::*;
-use ::yew::prelude::*;
 use scales::prelude::*;
 use web_sys::*;
+use yew::prelude::*;
 
 pub struct ParametricEq {
     props: Props,
@@ -19,7 +19,7 @@ pub struct ParametricEq {
 #[derive(Debug, Clone, PartialEq, Properties)]
 pub struct Props {
     pub id: String,
-    pub eq: EQ,
+    pub eq: EqModel,
     pub on_input: Callback<(usize, Parameter)>,
     pub width: f64,
     pub height: f64,

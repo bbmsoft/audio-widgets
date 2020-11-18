@@ -12,7 +12,7 @@ pub type Y = f64;
 pub type Radius = f64;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct EQ {
+pub struct EqModel {
     pub bands: Vec<(EqBand, Active)>,
     pub min_gain: Gain,
     pub max_gain: Gain,
@@ -23,7 +23,7 @@ pub struct EQ {
     pub active: Active,
 }
 
-impl EQ {
+impl EqModel {
     pub fn new(
         bands: Vec<(EqBand, Active)>,
         min_gain: f64,
@@ -33,8 +33,8 @@ impl EQ {
         min_q: f64,
         max_q: f64,
         active: Active,
-    ) -> EQ {
-        EQ {
+    ) -> EqModel {
+        EqModel {
             bands,
             min_gain,
             max_gain,
@@ -131,7 +131,7 @@ impl EQ {
     }
 }
 
-impl Default for EQ {
+impl Default for EqModel {
     fn default() -> Self {
         let mut bands = Vec::new();
         bands.push((
@@ -173,7 +173,7 @@ impl Default for EQ {
         let max_q = 100.0;
         let active = true;
 
-        EQ {
+        EqModel {
             bands,
             min_gain,
             max_gain,
