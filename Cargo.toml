@@ -18,8 +18,9 @@ maintenance = { status = "actively-developed" }
 crate-type = ["rlib", "cdylib"]
 
 [features]
-JS = ["wasm-bindgen", "js-sys", "web-sys"]
-Yew = ["yew", "JS"]
+default = ["js", "yew-components"]
+js = ["wasm-bindgen", "js-sys", "web-sys"]
+yew-components = ["yew", "js"]
 
 [dependencies]
 scales = "0.1"

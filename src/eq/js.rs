@@ -1,22 +1,21 @@
 use crate::eq::common::*;
+use crate::js_utils::*;
 use scales::prelude::*;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::JsValue;
 use web_sys::CanvasRenderingContext2d;
-use web_sys::CssStyleDeclaration;
 use web_sys::HtmlCanvasElement;
 
 pub struct CanvasEqRenderer {
-    context: CanvasRenderingContext2d,
-    major_gain_markers: Vec<f64>,
-    minor_gain_markers: Vec<f64>,
-    minor_grid: bool,
-    band_curves: bool,
-    style: Style,
-    geometry: Geometry,
+    pub context: CanvasRenderingContext2d,
+    pub major_gain_markers: Vec<f64>,
+    pub minor_gain_markers: Vec<f64>,
+    pub minor_grid: bool,
+    pub band_curves: bool,
+    pub style: Style,
+    pub geometry: Geometry,
 }
 
-struct Style {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Style {
     background_fill: Option<String>,
     major_grid_stroke: Option<String>,
     minor_grid_stroke: Option<String>,
@@ -30,12 +29,13 @@ struct Style {
     sum_fill: Option<String>,
 }
 
-struct Geometry {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Geometry {
     width: f64,
     height: f64,
 }
 
-impl<'a> CanvasEqRenderer {
+impl CanvasEqRenderer {
     pub fn new(
         canvas: HtmlCanvasElement,
         major_gain_markers: Vec<f64>,
@@ -43,27 +43,17 @@ impl<'a> CanvasEqRenderer {
         minor_grid: bool,
         band_curves: bool,
     ) -> Option<CanvasEqRenderer> {
-        let context = if let Ok(Some(ctx)) = canvas.get_context("2d") {
-            if let Ok(ctx) = ctx.dyn_into::<web_sys::CanvasRenderingContext2d>() {
-                ctx
-            } else {
-                return None;
-            }
-        } else {
-            return None;
-        };
-
-        let window = web_sys::window();
-        let style = window.map(|w| w.get_computed_style(&canvas));
+        let context = get_context_2d(&canvas)?;
+        let style = get_styles(&canvas);
 
         let width = canvas.width() as f64;
         let height = canvas.height() as f64;
 
         let geometry = Geometry { width, height };
 
-        let background_fill = get_style("--background", &style, Some("black"));
-        let major_grid_stroke = get_style("--major-grid", &style, Some("#333"));
-        let minor_grid_stroke = get_style("--minor-grid", &style, Some("#222"));
+        let background_fill = get_style("--background-fill", &style, Some("black"));
+        let major_grid_stroke = get_style("--major-grid-stroke", &style, Some("#333"));
+        let minor_grid_stroke = get_style("--minor-grid-stroke", &style, Some("#222"));
         let band_stroke = get_style("--band-stroke", &style, Some("#88f6"));
         let band_strokes = (0..10)
             .map(|i| {
@@ -233,37 +223,5 @@ fn stroke_curve(curve: &Vec<(X, Y)>, context: &web_sys::CanvasRenderingContext2d
 
     for (x, y) in curve {
         context.line_to(*x + 0.5, *y + 0.5);
-    }
-}
-
-fn get_style(
-    style_name: impl AsRef<str>,
-    style: &Option<Result<Option<CssStyleDeclaration>, JsValue>>,
-    default: Option<&str>,
-) -> Option<String> {
-    if let Some(Ok(Some(style))) = style.as_ref() {
-        if let Ok(style) = style.get_property_value(style_name.as_ref()) {
-            if !style.is_empty() {
-                Some(style)
-            } else {
-                default.map(|s| s.to_owned())
-            }
-        } else {
-            default.map(|s| s.to_owned())
-        }
-    } else {
-        default.map(|s| s.to_owned())
-    }
-}
-
-fn set_fill(context: &CanvasRenderingContext2d, style: Option<impl AsRef<str>>) {
-    if let Some(style) = style {
-        context.set_fill_style(&style.as_ref().into());
-    }
-}
-
-fn set_stroke(context: &CanvasRenderingContext2d, style: Option<impl AsRef<str>>) {
-    if let Some(style) = style {
-        context.set_stroke_style(&style.as_ref().into());
     }
 }

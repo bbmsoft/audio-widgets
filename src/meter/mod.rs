@@ -2,12 +2,12 @@ mod common;
 
 pub use crate::meter::common::*;
 
-#[cfg(feature = "JS")]
+#[cfg(feature = "js")]
 mod js;
-#[cfg(feature = "JS")]
+#[cfg(feature = "js")]
 pub use crate::meter::js::*;
 
-#[cfg(feature = "Yew")]
-mod yew;
-#[cfg(feature = "Yew")]
-pub use crate::meter::yew::*;
+#[cfg(feature = "yew-components")]
+mod yew_component;
+#[cfg(feature = "yew-components")]
+pub use crate::meter::yew_component::*;

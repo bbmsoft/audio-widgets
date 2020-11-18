@@ -1,5 +1,7 @@
 use crate::eq::*;
+use crate::js_utils::*;
 use scales::prelude::*;
+use wasm_bindgen::prelude::*;
 use web_sys::*;
 use yew::prelude::*;
 
@@ -14,6 +16,8 @@ pub struct ParametricEq {
     last_touch: Option<(X, Y)>,
     touch_interrupted: bool,
     renderer: Option<CanvasEqRenderer>,
+    render_callback: Closure<dyn FnMut()>,
+    needs_repaint: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Properties)]
@@ -42,6 +46,7 @@ pub enum Msg {
     Wheel(WheelEvent),
     Scroll(Event),
     Refresh,
+    Render,
 }
 
 impl Component for ParametricEq {
@@ -51,6 +56,9 @@ impl Component for ParametricEq {
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let canvas = NodeRef::default();
         let tooltip = NodeRef::default();
+        let cb_link = link.clone();
+        let render_callback =
+            Closure::wrap(Box::new(move || cb_link.send_message(Msg::Render)) as Box<dyn FnMut()>);
         ParametricEq {
             props,
             ext_props: None,
@@ -62,6 +70,8 @@ impl Component for ParametricEq {
             last_touch: None,
             touch_interrupted: true,
             renderer: None,
+            render_callback,
+            needs_repaint: false,
         }
     }
 
@@ -84,6 +94,7 @@ impl Component for ParametricEq {
             Msg::Refresh => {
                 return true;
             }
+            Msg::Render => self.render(),
         }
         false
     }
@@ -146,29 +157,41 @@ impl Component for ParametricEq {
         }
     }
 
-    fn rendered(&mut self, _first_render: bool) {
-        if let Some(canvas) = self.canvas.cast::<HtmlCanvasElement>() {
-            let rect = canvas.get_bounding_client_rect();
-            self.position = Some((rect.x(), rect.y()));
-            // TODO make grid markers properties
-            let major_gain_markers = vec![-6.0, 0.0, 6.0];
-            let minor_gain_markers = vec![-9.0, -3.0, 3.0, -9.0];
-            self.renderer = CanvasEqRenderer::new(
-                canvas,
-                major_gain_markers,
-                minor_gain_markers,
-                self.props.show_minor_grid,
-                self.props.show_band_curves,
-            );
+    fn rendered(&mut self, first_render: bool) {
+        if first_render {
+            if let Some(canvas) = self.canvas.cast::<HtmlCanvasElement>() {
+                let rect = canvas.get_bounding_client_rect();
+                self.position = Some((rect.x(), rect.y()));
+                // TODO make grid markers properties
+                let major_gain_markers = vec![-6.0, 0.0, 6.0];
+                let minor_gain_markers = vec![-9.0, -3.0, 3.0, -9.0];
+                self.renderer = CanvasEqRenderer::new(
+                    canvas,
+                    major_gain_markers,
+                    minor_gain_markers,
+                    self.props.show_minor_grid,
+                    self.props.show_band_curves,
+                );
+            } else {
+                self.position = None;
+            };
         } else {
-            self.position = None;
-        };
-        self.render();
+            if let Some(renderer) = self.renderer.as_mut() {
+                renderer.minor_grid = self.props.show_minor_grid;
+                renderer.band_curves = self.props.show_band_curves;
+            }
+        }
+
+        if !self.needs_repaint {
+            self.needs_repaint = true;
+            request_animation_frame(&self.render_callback);
+        }
     }
 }
 
 impl ParametricEq {
-    fn render(&self) {
+    fn render(&mut self) {
+        self.needs_repaint = false;
         if let Some(renderer) = &self.renderer {
             renderer.render_grid_to_canvas(&self.props.eq);
             renderer.render_to_canvas(&self.props.eq);
