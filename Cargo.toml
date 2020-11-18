@@ -3,8 +3,16 @@ name = "audio-widgets"
 version = "0.1.0"
 authors = ["Michael Bachmann <mbachmann@bbmsoft.net>"]
 edition = "2018"
+description = "A collection of audio related UI widgets for Rust."
+repository = "https://github.com/bbmsoft/audio-widgets.git"
+license = "MIT OR Apache-2.0"
+keywords = ["audio", "widgets", "gui"]
+categories = ["gui"]
+homepage = "https://github.com/bbmsoft/audio-widgets"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[badges]
+travis-ci = { repository = "https://github.com/bbmsoft/audio-widgets.git", branch = "master" }
+maintenance = { status = "actively-developed" }
 
 [lib]
 crate-type = ["rlib", "cdylib"]
@@ -14,9 +22,7 @@ JS = ["wasm-bindgen", "js-sys", "web-sys"]
 Yew = ["yew", "JS"]
 
 [dependencies]
-
-scales = { path = "../scales" }
-
+scales = "0.1"
 wasm-bindgen = { version = "0.2", optional = true }
 js-sys = { version = "0.3", optional = true }
 web-sys = { version = "0.3", optional = true, features = [
