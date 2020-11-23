@@ -1,9 +1,6 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::CanvasRenderingContext2d;
-use web_sys::CssStyleDeclaration;
-use web_sys::Element;
-use web_sys::HtmlCanvasElement;
+use web_sys::*;
 
 pub fn get_style(
     style_name: impl AsRef<str>,
@@ -60,6 +57,11 @@ pub fn get_context_2d(canvas: &HtmlCanvasElement) -> Option<CanvasRenderingConte
     } else {
         None
     }
+}
+
+pub fn set_style(element: &HtmlElement, key: &str, value: &str) {
+    // TODO handle errors
+    element.style().set_property(key, value).unwrap();
 }
 
 fn window() -> web_sys::Window {

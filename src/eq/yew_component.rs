@@ -310,6 +310,7 @@ impl ParametricEq {
                 }
             }
         }
+        e.prevent_default();
     }
 
     fn handle_scroll(&self, e: Event) {
@@ -585,9 +586,4 @@ fn position_tooltip(
         .style()
         .set_property("top", &format!("{}px", top))
         .unwrap();
-}
-
-fn set_style(element: &HtmlElement, key: &str, value: &str) {
-    // TODO handle errors
-    element.style().set_property(key, value).unwrap();
 }

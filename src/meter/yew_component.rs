@@ -6,7 +6,6 @@ use yew::prelude::*;
 
 pub struct Meter {
     props: Props,
-    link: ComponentLink<Self>,
     canvas: NodeRef,
     renderer: Option<CanvasMeterRenderer>,
     render_callback: Closure<dyn FnMut()>,
@@ -33,12 +32,10 @@ impl Component for Meter {
     type Properties = Props;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let cb_link = link.clone();
         let render_callback =
-            Closure::wrap(Box::new(move || cb_link.send_message(Msg::Render)) as Box<dyn FnMut()>);
+            Closure::wrap(Box::new(move || link.send_message(Msg::Render)) as Box<dyn FnMut()>);
         Meter {
             props,
-            link,
             canvas: NodeRef::default(),
             renderer: None,
             render_callback,
