@@ -2,6 +2,7 @@ use crate::fader::common::*;
 use crate::fader::js::*;
 use crate::js_utils::*;
 use scales::prelude::*;
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 use yew::prelude::*;
@@ -18,6 +19,8 @@ pub struct Fader {
     touched: bool,
     layout_callback: Closure<dyn FnMut()>,
     needs_layout: bool,
+
+    mouse_moved: Rc<Closure<dyn Fn(MouseEvent) -> ()>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Properties)]
@@ -77,6 +80,7 @@ impl Fader {
         self.touched = true;
         self.show_tooltip();
         self.link.send_message(Msg::Refresh);
+        register_global_mouse_move_listener(self.mouse_moved.clone());
     }
 
     fn handle_up(&mut self) {
@@ -150,6 +154,10 @@ impl Component for Fader {
         let layout_callback =
             Closure::wrap(Box::new(move || cb_link.send_message(Msg::Layout)) as Box<dyn FnMut()>);
 
+        let cb_link = link.clone();
+        let mouse_moved = Closure::wrap(Box::new(move |e| cb_link.send_message(Msg::MouseMove(e)))
+            as Box<dyn Fn(MouseEvent) -> ()>);
+
         Fader {
             props,
             ext_props: None,
@@ -161,6 +169,7 @@ impl Component for Fader {
             touched: false,
             layout_callback,
             needs_layout: false,
+            mouse_moved: Rc::new(mouse_moved),
         }
     }
 
@@ -198,8 +207,8 @@ impl Component for Fader {
                 class="fader"
                 id={id} ref=self.root.clone()
                 onmousedown={mouse_down_callback}
-                onmouseup={mouse_up_callback}
-                onmousemove={mouse_move_callback}
+                // onmouseup={mouse_up_callback}
+                // onmousemove={mouse_move_callback}
             >
                 <span class="thumb" ref=self.thumb.clone()></span>
                 <span class="track"></span>
