@@ -56,9 +56,27 @@ impl Component for ParametricEq {
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let canvas = NodeRef::default();
         let tooltip = NodeRef::default();
+
         let cb_link = link.clone();
         let render_callback =
             Closure::wrap(Box::new(move || cb_link.send_message(Msg::Render)) as Box<dyn FnMut()>);
+
+        let cb_link = link.clone();
+        let mouse_moved =
+            Closure::wrap(Box::new(move |e| cb_link.send_message(Msg::MouseMove(e)))
+                as Box<dyn Fn(MouseEvent)>);
+
+        let cb_link = link.clone();
+        let mouse_up = Closure::wrap(
+            Box::new(move |e| cb_link.send_message(Msg::MouseUp(e))) as Box<dyn Fn(MouseEvent)>
+        );
+
+        register_global_listener("mousemove", &mouse_moved);
+        register_global_listener("mouseup", &mouse_up);
+
+        mouse_moved.forget();
+        mouse_up.forget();
+
         ParametricEq {
             props,
             ext_props: None,
@@ -112,8 +130,6 @@ impl Component for ParametricEq {
 
     fn view(&self) -> Html {
         let mouse_down_callback = self.link.callback(|e| Msg::MouseDown(e));
-        let mouse_up_callback = self.link.callback(|e| Msg::MouseUp(e));
-        let mouse_move_callback = self.link.callback(|e| Msg::MouseMove(e));
 
         let touch_start_callback = self.link.callback(|e| Msg::TouchStart(e));
         let touch_end_callback = self.link.callback(|e| Msg::TouchEnd(e));
@@ -131,8 +147,6 @@ impl Component for ParametricEq {
                 <canvas
                     id={self.props.id.clone()}
                     onmousedown={mouse_down_callback}
-                    onmouseup={mouse_up_callback}
-                    onmousemove={mouse_move_callback}
                     ontouchstart={touch_start_callback}
                     ontouchend={touch_end_callback}
                     ontouchmove={touch_move_callback}
@@ -297,7 +311,10 @@ impl ParametricEq {
     fn handle_wheel(&mut self, e: WheelEvent) {
         let x = e.offset_x() as f64;
         let y = e.offset_y() as f64;
-        if let Some(band) = self.find_closest_band(x, y) {
+
+        let band = self.active_band.or(self.find_closest_band(x, y));
+
+        if let Some(band) = band {
             let eq = &self.props.eq;
             if let Some(q) = eq.bands[band].0.q() {
                 let q_conv = self.q_converter();

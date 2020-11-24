@@ -2,7 +2,6 @@ use crate::fader::common::*;
 use crate::fader::js::*;
 use crate::js_utils::*;
 use scales::prelude::*;
-use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 use yew::prelude::*;
@@ -19,8 +18,6 @@ pub struct Fader {
     touched: bool,
     layout_callback: Closure<dyn FnMut()>,
     needs_layout: bool,
-
-    mouse_moved: Rc<Closure<dyn Fn(MouseEvent) -> ()>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Properties)]
@@ -36,6 +33,8 @@ pub enum Msg {
     MouseDown(MouseEvent),
     MouseUp(MouseEvent),
     MouseMove(MouseEvent),
+    Wheel(WheelEvent),
+    Scroll(Event),
     Layout,
     InternalUpdate(FaderValue),
     Refresh,
@@ -43,8 +42,13 @@ pub enum Msg {
 
 impl Fader {
     fn format_tooltip_text(&self) -> Html {
+        let gain = self.props.fader.value;
         html! {
-            // TODO
+            <table>
+                <tr>
+                    <td>{"Gain: "}</td> <td>{format!("{:.1}", gain)}{" dB"}</td>
+                </tr>
+            </table>
         }
     }
 
@@ -55,38 +59,65 @@ impl Fader {
             let value = self.props.fader.value;
             let y = elements.converter.convert_back(value);
             set_style(&thumb, "top", &format!("{}px", y));
+            self.update_tooltip();
         }
     }
 
     fn handle_mouse_down(&mut self, e: MouseEvent) {
-        if e.button() != 0 {
-            return;
+        if e.button() == 0 {
+            self.handle_down();
         }
-
-        self.handle_down();
     }
 
-    fn handle_mouse_up(&mut self, _e: MouseEvent) {
-        self.handle_up();
+    fn handle_mouse_up(&mut self, e: MouseEvent) {
+        if e.button() == 0 {
+            self.handle_up();
+        }
     }
 
     fn handle_mouse_move(&mut self, e: MouseEvent) {
         let d_y = e.movement_y() as f64;
-
         self.handle_move(d_y);
     }
 
+    fn handle_wheel(&mut self, e: WheelEvent) {
+        if let Some(elements) = &self.elements {
+            let fader = &self.props.fader;
+            let g = fader.value;
+            let conv = &elements.converter;
+            let dampening = 2.0;
+            let delta = e.delta_y().signum() * dampening;
+            let new_g = conv.add_external_clamped(delta, g);
+            if new_g != g {
+                self.update_internally(new_g);
+                self.update_backend(new_g);
+            }
+        }
+
+        e.prevent_default();
+    }
+
+    fn handle_scroll(&self, e: Event) {
+        // prevent pull-to-refresh on mobile devices
+        e.prevent_default();
+    }
+
+    // TODO reset touched if window loses focus
+
     fn handle_down(&mut self) {
-        self.touched = true;
-        self.show_tooltip();
-        self.link.send_message(Msg::Refresh);
-        register_global_mouse_move_listener(self.mouse_moved.clone());
+        if !self.touched {
+            self.touched = true;
+            self.show_tooltip();
+            self.link.send_message(Msg::Refresh);
+        }
     }
 
     fn handle_up(&mut self) {
-        self.touched = false;
-        self.hide_tooltip();
-        self.apply_ext_props();
+        if self.touched {
+            self.touched = false;
+            self.hide_tooltip();
+            self.apply_ext_props();
+        }
     }
 
     fn handle_move(&self, d_y: Y) {
@@ -135,6 +166,24 @@ impl Fader {
         }
     }
 
+    fn update_tooltip(&self) {
+        if !self.props.show_tooltip {
+            return;
+        }
+
+        if let (Some(tooltip), Some(elements)) =
+            (&self.tooltip.cast::<HtmlElement>(), &self.elements)
+        {
+            let fader = &self.props.fader;
+
+            let gain = fader.value;
+
+            let conv = &elements.converter;
+
+            position_tooltip(&tooltip, gain, conv);
+        }
+    }
+
     fn apply_ext_props(&mut self) {
         if let Some(props) = &self.ext_props {
             self.props = props.to_owned();
@@ -155,8 +204,20 @@ impl Component for Fader {
             Closure::wrap(Box::new(move || cb_link.send_message(Msg::Layout)) as Box<dyn FnMut()>);
 
         let cb_link = link.clone();
-        let mouse_moved = Closure::wrap(Box::new(move |e| cb_link.send_message(Msg::MouseMove(e)))
-            as Box<dyn Fn(MouseEvent) -> ()>);
+        let mouse_moved =
+            Closure::wrap(Box::new(move |e| cb_link.send_message(Msg::MouseMove(e)))
+                as Box<dyn Fn(MouseEvent)>);
+
+        let cb_link = link.clone();
+        let mouse_up = Closure::wrap(
+            Box::new(move |e| cb_link.send_message(Msg::MouseUp(e))) as Box<dyn Fn(MouseEvent)>
+        );
+
+        register_global_listener("mousemove", &mouse_moved);
+        register_global_listener("mouseup", &mouse_up);
+
+        mouse_moved.forget();
+        mouse_up.forget();
 
         Fader {
             props,
@@ -169,7 +230,6 @@ impl Component for Fader {
             touched: false,
             layout_callback,
             needs_layout: false,
-            mouse_moved: Rc::new(mouse_moved),
         }
     }
 
@@ -178,6 +238,8 @@ impl Component for Fader {
             Msg::MouseDown(e) => self.handle_mouse_down(e),
             Msg::MouseUp(e) => self.handle_mouse_up(e),
             Msg::MouseMove(e) => self.handle_mouse_move(e),
+            Msg::Wheel(e) => self.handle_wheel(e),
+            Msg::Scroll(e) => self.handle_scroll(e),
             Msg::Layout => self.update_thumb_position(),
             Msg::Refresh => {
                 return true;
@@ -199,16 +261,16 @@ impl Component for Fader {
         let id = self.props.id.clone();
 
         let mouse_down_callback = self.link.callback(|e| Msg::MouseDown(e));
-        let mouse_up_callback = self.link.callback(|e| Msg::MouseUp(e));
-        let mouse_move_callback = self.link.callback(|e| Msg::MouseMove(e));
+        let wheel_callback = self.link.callback(|e| Msg::Wheel(e));
+        let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
 
         html! {
             <div
                 class="fader"
                 id={id} ref=self.root.clone()
                 onmousedown={mouse_down_callback}
-                // onmouseup={mouse_up_callback}
-                // onmousemove={mouse_move_callback}
+                onwheel={wheel_callback}
+                onscroll={scroll_callback}
             >
                 <span class="thumb" ref=self.thumb.clone()></span>
                 <span class="track"></span>
@@ -272,4 +334,20 @@ impl Component for Fader {
             request_animation_frame(&self.layout_callback);
         }
     }
+}
+
+fn position_tooltip(tooltip: &HtmlElement, gain: f64, conv: &impl Converter<Y, FaderValue>) {
+    let padding = 8.0;
+
+    let tooltip_rect = tooltip.get_bounding_client_rect();
+    let tooltip_height = tooltip_rect.height();
+
+    let y = conv.convert_back(gain);
+
+    let top = (y - tooltip_height - 2.0 * padding).max(padding);
+
+    tooltip
+        .style()
+        .set_property("top", &format!("{}px", top))
+        .unwrap();
 }

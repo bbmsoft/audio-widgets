@@ -66,30 +66,36 @@ pub fn set_style(element: &HtmlElement, key: &str, value: &str) {
     element.style().set_property(key, value).unwrap();
 }
 
-pub fn register_global_mouse_move_listener(listener: Rc<Closure<dyn Fn(MouseEvent) -> ()>>) {
+// pub fn register_global_mouse_move_listener(listener: Rc<Closure<dyn Fn(MouseEvent) -> ()>>) {
+//     let doc = document();
+
+//     let on_up: Rc<Cell<Option<Closure<dyn Fn(MouseEvent) -> ()>>>> = Rc::new(Cell::new(None));
+
+//     let listener_cb = listener.clone();
+//     let on_up_cb = on_up.clone();
+
+//     let on_up_callback = Closure::wrap(Box::new(move |_| {
+//         unregister_global_listener("mousemove", &listener_cb);
+//         if let Some(cl) = on_up_cb.take() {
+//             unregister_global_listener("mouseup", &cl);
+//         }
+//     }) as Box<dyn Fn(MouseEvent) -> ()>);
+
+//     doc.add_event_listener_with_callback("mouseup", on_up_callback.as_ref().unchecked_ref())
+//         .expect("registering listener failed");
+//     doc.add_event_listener_with_callback("mousemove", (*listener).as_ref().unchecked_ref())
+//         .expect("registering listener failed");
+
+//     on_up.set(Some(on_up_callback));
+// }
+
+pub fn register_global_listener(event_type: &str, listener: &Closure<dyn Fn(MouseEvent) -> ()>) {
     let doc = document();
-
-    let on_up: Rc<Cell<Option<Closure<dyn Fn(MouseEvent) -> ()>>>> = Rc::new(Cell::new(None));
-
-    let listener_cb = listener.clone();
-    let on_up_cb = on_up.clone();
-
-    let on_up_callback = Closure::wrap(Box::new(move |_| {
-        unregister_global_listener("mousemove", &listener_cb);
-        if let Some(cl) = on_up_cb.take() {
-            unregister_global_listener("mouseup", &cl);
-        }
-    }) as Box<dyn Fn(MouseEvent) -> ()>);
-
-    doc.add_event_listener_with_callback("mouseup", on_up_callback.as_ref().unchecked_ref())
+    doc.add_event_listener_with_callback(event_type, listener.as_ref().unchecked_ref())
         .expect("registering listener failed");
-    doc.add_event_listener_with_callback("mousemove", (*listener).as_ref().unchecked_ref())
-        .expect("registering listener failed");
-
-    on_up.set(Some(on_up_callback));
 }
 
-fn unregister_global_listener(event_type: &str, listener: &Closure<dyn Fn(MouseEvent) -> ()>) {
+pub fn unregister_global_listener(event_type: &str, listener: &Closure<dyn Fn(MouseEvent) -> ()>) {
     let doc = document();
     doc.remove_event_listener_with_callback(event_type, listener.as_ref().unchecked_ref())
         .expect("registering listener failed");
