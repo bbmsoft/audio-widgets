@@ -27,6 +27,7 @@ pub struct Props {
     pub fader: FaderModel,
     pub on_input: Callback<FaderValue>,
     pub show_tooltip: bool,
+    pub label: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -44,10 +45,11 @@ pub enum Msg {
 impl Fader {
     fn format_tooltip_text(&self) -> Html {
         let gain = self.props.fader.value;
+        let label = &self.props.label;
         html! {
             <table>
                 <tr>
-                    <td>{"Gain: "}</td> <td>{format_gain(gain)}</td>
+                    <td>{format!("{}: ", label)}</td> <td>{format_gain(gain)}</td>
                 </tr>
             </table>
         }
