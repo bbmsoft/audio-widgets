@@ -10,7 +10,7 @@ pub struct Elements {
     pub tooltip: Option<HtmlElement>,
     pub bounds: Bounds,
     pub thumb_bounds: Bounds,
-    pub converter: (LinearScale<f64>, LinearScale<f64>),
+    pub converter: (LinearScale<f64>, BrokenScale<f64>),
 }
 
 #[derive(Debug, Clone, PartialEq)]

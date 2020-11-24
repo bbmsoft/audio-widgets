@@ -3,6 +3,7 @@ use crate::fader::js::*;
 use crate::js_utils::*;
 use crate::utils::*;
 use scales::prelude::*;
+use std::fmt::Debug;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 use yew::prelude::*;
