@@ -7,5 +7,7 @@ pub mod fader;
 pub mod meter;
 pub mod slider;
 
+mod utils;
+
 // #[cfg(feature = "JS")]
 mod js_utils;

@@ -1,5 +1,6 @@
 use crate::eq::*;
 use crate::js_utils::*;
+use crate::utils::*;
 use scales::prelude::*;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
@@ -501,7 +502,7 @@ fn format_band(band: &EqBand) -> Html {
                     <td>{"Freq:"}</td> <td>{format_frequency(*frequency)}</td>
                 </tr>
                 <tr>
-                    <td>{"Gain: "}</td> <td>{format!("{:.1}", gain)}{" dB"}</td>
+                    <td>{"Gain: "}</td> <td>{format_gain(*gain)}</td>
                 </tr>
                 <tr>
                     <td>{"Q: "}</td> <td>{format!("{:.*}", 2 - (q.log10().ceil() as usize), q)}</td>
@@ -532,31 +533,6 @@ fn format_band(band: &EqBand) -> Html {
                 </table>
             }
         }
-    }
-}
-
-fn format_frequency(frequency: f64) -> Html {
-    let unit = if frequency >= 1_000_f64 {
-        " kHz"
-    } else {
-        " Hz"
-    };
-    let value = if frequency >= 1_000_f64 {
-        frequency / 1_000_f64
-    } else {
-        frequency
-    };
-    let digits = if frequency >= 10_000.0 {
-        1
-    } else if frequency >= 1_000_f64 {
-        2
-    } else if frequency >= 100_f64 {
-        0
-    } else {
-        1
-    };
-    html! {
-        <>{format!("{:.*}", digits, value)}{unit}</>
     }
 }
 

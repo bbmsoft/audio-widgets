@@ -1,6 +1,7 @@
 use crate::fader::common::*;
 use crate::fader::js::*;
 use crate::js_utils::*;
+use crate::utils::*;
 use scales::prelude::*;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
@@ -46,7 +47,7 @@ impl Fader {
         html! {
             <table>
                 <tr>
-                    <td>{"Gain: "}</td> <td>{format!("{:.1}", gain)}{" dB"}</td>
+                    <td>{"Gain: "}</td> <td>{format_gain(gain)}</td>
                 </tr>
             </table>
         }
