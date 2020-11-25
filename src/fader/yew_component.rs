@@ -14,7 +14,7 @@ pub struct Fader {
     ext_props: Option<Props>,
     link: ComponentLink<Self>,
     root: NodeRef,
-    thumb: NodeRef,
+    knob: NodeRef,
     tooltip: NodeRef,
     elements: Option<Elements>,
     touched: bool,
@@ -56,13 +56,13 @@ impl Fader {
         }
     }
 
-    fn update_thumb_position(&mut self) {
+    fn update_knob_position(&mut self) {
         self.needs_layout = false;
         if let Some(elements) = &self.elements {
-            let thumb = &elements.thumb;
+            let knob = &elements.knob;
             let value = self.props.fader.value;
             let y = elements.converter.convert_back(value);
-            set_style(&thumb, "top", &format!("{}px", y));
+            set_style(&knob, "top", &format!("{}px", y));
             self.update_tooltip();
         }
     }
@@ -228,7 +228,7 @@ impl Component for Fader {
             ext_props: None,
             link,
             root: NodeRef::default(),
-            thumb: NodeRef::default(),
+            knob: NodeRef::default(),
             tooltip: NodeRef::default(),
             elements: None,
             touched: false,
@@ -244,7 +244,7 @@ impl Component for Fader {
             Msg::MouseMove(e) => self.handle_mouse_move(e),
             Msg::Wheel(e) => self.handle_wheel(e),
             Msg::Scroll(e) => self.handle_scroll(e),
-            Msg::Layout => self.update_thumb_position(),
+            Msg::Layout => self.update_knob_position(),
             Msg::Refresh => {
                 return true;
             }
@@ -276,7 +276,7 @@ impl Component for Fader {
                 onwheel={wheel_callback}
                 onscroll={scroll_callback}
             >
-                <span class="thumb" ref=self.thumb.clone()></span>
+                <span class="knob" ref=self.knob.clone()></span>
                 <span class="track"></span>
                 {
                     if self.props.show_tooltip {
@@ -292,9 +292,9 @@ impl Component for Fader {
 
     fn rendered(&mut self, first_render: bool) {
         if first_render {
-            if let (Some(root), Some(thumb)) = (
+            if let (Some(root), Some(knob)) = (
                 self.root.cast::<HtmlElement>(),
-                self.thumb.cast::<HtmlElement>(),
+                self.knob.cast::<HtmlElement>(),
             ) {
                 let tooltip = self.tooltip.cast::<HtmlElement>();
                 let rect = root.get_bounding_client_rect();
@@ -306,26 +306,26 @@ impl Component for Fader {
                     height: rect.height(),
                 };
 
-                let thumb_rect = thumb.get_bounding_client_rect();
-                let thumb_bounds = Bounds {
-                    x: thumb_rect.x(),
-                    y: thumb_rect.y(),
-                    width: thumb_rect.width(),
-                    height: thumb_rect.height(),
+                let knob_rect = knob.get_bounding_client_rect();
+                let knob_bounds = Bounds {
+                    x: knob_rect.x(),
+                    y: knob_rect.y(),
+                    width: knob_rect.width(),
+                    height: knob_rect.height(),
                 };
 
                 let converter = self.props.fader.y_to_gain_converter(
                     bounds.y,
                     bounds.height,
-                    thumb_bounds.height,
+                    knob_bounds.height,
                     true,
                 );
 
                 self.elements = Some(Elements {
-                    thumb,
+                    knob,
                     tooltip,
                     bounds,
-                    thumb_bounds,
+                    knob_bounds,
                     converter,
                 });
             } else {

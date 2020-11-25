@@ -34,13 +34,13 @@ impl FaderModel {
         &self,
         y_offset: f64,
         height: f64,
-        thumb_height: f64,
+        knob_height: f64,
         inverted: bool,
     ) -> (LinearScale<f64>, BrokenScale<f64>) {
         let y_scale = if inverted {
-            LinearScale::inverted(y_offset, y_offset + height - thumb_height)
+            LinearScale::inverted(y_offset, y_offset + height - knob_height)
         } else {
-            LinearScale::new(y_offset, y_offset + height - thumb_height)
+            LinearScale::new(y_offset, y_offset + height - knob_height)
         };
         let gain_scale = self.scale.clone();
         (y_scale, gain_scale)
