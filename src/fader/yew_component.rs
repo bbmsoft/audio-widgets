@@ -1,7 +1,9 @@
 use crate::fader::common::*;
 use crate::fader::js::*;
 use crate::js_utils::*;
+use crate::scale::ScaleModel;
 use crate::utils::*;
+use crate::*;
 use scales::prelude::*;
 use std::fmt::Debug;
 use wasm_bindgen::prelude::*;
@@ -20,6 +22,7 @@ pub struct Fader {
     touched: bool,
     layout_callback: Closure<dyn FnMut()>,
     needs_layout: bool,
+    background: NodeRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Properties)]
@@ -29,6 +32,8 @@ pub struct Props {
     pub on_input: Callback<FaderValue>,
     pub show_tooltip: bool,
     pub label: String,
+    pub scale: ScaleModel<BrokenScale<f64>>,
+    pub draw_scale_labels: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -195,6 +200,34 @@ impl Fader {
             self.link.send_message(Msg::Refresh);
         }
     }
+
+    fn knob_bounds(&self) -> Option<Bounds> {
+        self.knob
+            .cast::<Element>()
+            .map(|knob| knob.get_bounding_client_rect().into())
+    }
+
+    fn background_bounds(&self) -> Option<Bounds> {
+        self.background
+            .cast::<Element>()
+            .map(|knob| knob.get_bounding_client_rect().into())
+    }
+
+    fn scale_bounds(&self) -> Option<Bounds> {
+        let knob_bounds = self.knob_bounds()?;
+        let background_bounds = self.background_bounds()?;
+        let scale_x = 0.0;
+        let scale_y = knob_bounds.height / 2.0;
+        let scale_width = background_bounds.width;
+        let scale_height = background_bounds.height - knob_bounds.height;
+
+        Some(Bounds {
+            x: scale_x,
+            y: scale_y,
+            width: scale_width,
+            height: scale_height,
+        })
+    }
 }
 
 impl Component for Fader {
@@ -224,7 +257,7 @@ impl Component for Fader {
         mouse_up.forget();
 
         Fader {
-            props,
+            props: props.clone(),
             ext_props: None,
             link,
             root: NodeRef::default(),
@@ -234,6 +267,7 @@ impl Component for Fader {
             touched: false,
             layout_callback,
             needs_layout: false,
+            background: NodeRef::default(),
         }
     }
 
@@ -268,6 +302,16 @@ impl Component for Fader {
         let wheel_callback = self.link.callback(|e| Msg::Wheel(e));
         let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
 
+        let scale = self.props.scale.clone();
+        let canvas = NodeRef::default();
+        let draw_labels = self.props.draw_scale_labels;
+
+        let background = self.background.clone();
+        let scale_bounds = self.scale_bounds();
+        let background_bounds = self.background_bounds();
+        let canvas_width = background_bounds.as_ref().map(|b| b.width).unwrap_or(0.0);
+        let canvas_height = &background_bounds.as_ref().map(|b| b.height).unwrap_or(0.0);
+
         html! {
             <div
                 class="fader"
@@ -276,8 +320,12 @@ impl Component for Fader {
                 onwheel={wheel_callback}
                 onscroll={scroll_callback}
             >
+                <div class="fader-background" ref={background}>
+                    <span class="track"></span>
+                    <canvas class="scale" width={canvas_width} height={canvas_height} ref={canvas.clone()} />
+                    <crate::scale::Scale<BrokenScale<f64>>scale={scale} canvas={canvas} draw_labels={draw_labels} bounds={scale_bounds}/>
+                </div>
                 <span class="knob" ref=self.knob.clone()></span>
-                <span class="track"></span>
                 {
                     if self.props.show_tooltip {
                         let tooltip_text = self.format_tooltip_text();
@@ -331,6 +379,8 @@ impl Component for Fader {
             } else {
                 self.elements = None;
             }
+
+            self.link.send_message(Msg::Refresh)
         }
 
         if !self.needs_layout {

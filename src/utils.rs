@@ -26,3 +26,13 @@ pub fn format_gain(gain: f64) -> String {
         format!("{:.*} {}", digits, abs, unit)
     }
 }
+
+pub trait Ignore {
+    fn ignore(self);
+}
+
+impl<E> Ignore for std::result::Result<(), E> {
+    fn ignore(self) {
+        ()
+    }
+}

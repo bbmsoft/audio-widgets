@@ -1,6 +1,7 @@
 use crate::eq::*;
 use crate::js_utils::*;
 use crate::utils::*;
+use crate::*;
 use scales::prelude::*;
 use wasm_bindgen::prelude::*;
 use web_sys::*;

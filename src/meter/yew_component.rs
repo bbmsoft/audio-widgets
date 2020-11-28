@@ -67,12 +67,6 @@ impl Component for Meter {
         if first_render {
             self.renderer = self.canvas.cast::<HtmlCanvasElement>().and_then(|canvas| {
                 let rect = canvas.get_bounding_client_rect();
-                // TODO make grid markers properties
-                let major_scale_markers = vec![-9.0, -18.0, -27.0, -36.0, -45.0, -54.0];
-                let minor_scale_markers = vec![
-                    -3.0, -6.0, -12.0, -15.0, -21.0, -24.0, -30.0, -33.0, -39.0, -42.0, -48.0,
-                    -51.0, -57.0,
-                ];
                 // TODO make thresholds properties
                 let highlight_threshold = -15.0;
                 let warning_threshold = -9.0;
@@ -83,14 +77,10 @@ impl Component for Meter {
                     rect.width(),
                     rect.height(),
                     true,
-                    major_scale_markers,
-                    minor_scale_markers,
                     highlight_threshold,
                     warning_threshold,
                 )
             });
-
-            self.render_scale();
         }
 
         if !self.needs_repaint {
@@ -104,13 +94,7 @@ impl Meter {
     fn render(&mut self) {
         self.needs_repaint = false;
         if let Some(renderer) = self.renderer.as_ref() {
-            renderer.render_to_canvas(&self.props.meter, self.props.bar_width);
-        }
-    }
-
-    fn render_scale(&self) {
-        if let Some(renderer) = self.renderer.as_ref() {
-            renderer.render_scale_to_canvas(&self.props.meter, self.props.bar_width);
+            renderer.render_to_canvas(&self.props.meter);
         }
     }
 }

@@ -1,5 +1,6 @@
 use crate::eq::common::*;
 use crate::js_utils::*;
+use crate::*;
 use scales::prelude::*;
 use web_sys::CanvasRenderingContext2d;
 use web_sys::HtmlCanvasElement;

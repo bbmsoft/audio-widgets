@@ -1,6 +1,4 @@
-pub type MeterValue = f64;
-pub type PeakValue = f64;
-pub type Update = (MeterValue, PeakValue);
+use crate::*;
 use scales::prelude::*;
 
 #[derive(Debug, PartialEq, Clone)]

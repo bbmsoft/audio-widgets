@@ -1,4 +1,5 @@
 use crate::eq::common::*;
+use crate::*;
 use scales::prelude::*;
 
 const COEFFS: [[f64; 6]; 7] = [

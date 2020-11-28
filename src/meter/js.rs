@@ -1,18 +1,17 @@
 use crate::js_utils::*;
 use crate::meter::common::*;
+use crate::*;
 use scales::prelude::*;
 use web_sys::CanvasRenderingContext2d;
 use web_sys::HtmlCanvasElement;
 
 pub struct CanvasMeterRenderer {
     context: CanvasRenderingContext2d,
-    major_scale_markers: Vec<MeterValue>,
-    minor_scale_markers: Vec<MeterValue>,
     highlight_threshold: MeterValue,
     warning_threshold: MeterValue,
     draw_peak: bool,
     style: Style,
-    geometry: Geometry,
+    bounds: Bounds,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,9 +25,9 @@ struct Style {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct Geometry {
-    x_offset: f64,
-    y_offset: f64,
+struct Bounds {
+    x: f64,
+    y: f64,
     width: f64,
     height: f64,
 }
@@ -36,22 +35,20 @@ struct Geometry {
 impl CanvasMeterRenderer {
     pub fn new(
         canvas: HtmlCanvasElement,
-        x_offset: f64,
-        y_offset: f64,
+        x: f64,
+        y: f64,
         width: f64,
         height: f64,
         draw_peak: bool,
-        major_scale_markers: Vec<MeterValue>,
-        minor_scale_markers: Vec<MeterValue>,
         highlight_threshold: MeterValue,
         warning_threshold: MeterValue,
     ) -> Option<CanvasMeterRenderer> {
         let context = get_context_2d(&canvas)?;
         let style = get_styles(&canvas);
 
-        let geometry = Geometry {
-            x_offset,
-            y_offset,
+        let bounds = Bounds {
+            x,
+            y,
             width,
             height,
         };
@@ -74,62 +71,26 @@ impl CanvasMeterRenderer {
 
         Some(CanvasMeterRenderer {
             context,
-            major_scale_markers,
-            minor_scale_markers,
             highlight_threshold,
             warning_threshold,
-            geometry,
+            bounds,
             style,
             draw_peak,
         })
     }
 
-    pub fn render_scale_to_canvas(&self, meter: &MeterModel, scale_offset: f64) {
+    pub fn render_to_canvas(&self, meter: &MeterModel) {
         let context = &self.context;
 
-        let left = (self.geometry.x_offset + scale_offset).floor();
-        let width = (self.geometry.width - scale_offset).floor();
-        let height = self.geometry.height.floor();
-        let top = self.geometry.y_offset.floor();
+        let left = self.bounds.x.floor();
+        let width = self.bounds.width.floor();
+        let height = self.bounds.height.floor();
+        let top = self.bounds.y.floor();
+        let bottom = (self.bounds.y + height).floor();
 
-        let right_major = (self.geometry.x_offset + scale_offset + width / 3.0).floor();
-        let right_minor = (self.geometry.x_offset + scale_offset + width / 4.0).floor();
+        let y_conv = meter.y_to_gain_converter(self.bounds.y, height, true);
 
-        let y_conv = meter.y_to_gain_converter(top, height, true);
-
-        set_stroke(context, self.style.scale_stroke.as_ref());
-
-        context.begin_path();
-
-        for marker in &self.major_scale_markers {
-            let y = (top + y_conv.convert_back(*marker)).floor() + 0.5;
-            context.move_to(left, y);
-            context.line_to(right_major, y);
-        }
-
-        for marker in &self.minor_scale_markers {
-            let y = (top + y_conv.convert_back(*marker)).floor() + 0.5;
-            context.move_to(left, y);
-            context.line_to(right_minor, y);
-        }
-
-        context.stroke();
-
-        // TODO
-    }
-
-    pub fn render_to_canvas(&self, meter: &MeterModel, scale_offset: f64) {
-        let context = &self.context;
-
-        let left = (self.geometry.x_offset).floor();
-        let width = scale_offset.floor();
-        let height = self.geometry.height.floor();
-        let top = self.geometry.y_offset.floor();
-        let bottom = (self.geometry.y_offset + height).floor();
-
-        let y_conv = meter.y_to_gain_converter(self.geometry.y_offset, height, true);
-
-        let peak_height = (scale_offset / 2.0).min(height / 32.0).floor();
+        let peak_height = (width / 2.0).min(height / 32.0).floor();
         let y_peak = y_conv.convert_back(meter.peak).floor();
         let y_value = y_conv
             .convert_back(meter.value)

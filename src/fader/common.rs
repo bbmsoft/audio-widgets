@@ -1,7 +1,6 @@
+use crate::*;
 use scales::prelude::*;
 use std::fmt::Debug;
-
-pub type FaderValue = f64;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FaderModel {

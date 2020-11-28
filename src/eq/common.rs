@@ -1,15 +1,6 @@
 use crate::eq::plotter;
+use crate::*;
 use scales::prelude::*;
-
-pub type Frequency = f64;
-pub type Gain = f64;
-pub type Q = f64;
-pub type Slope = usize;
-pub type Active = bool;
-
-pub type X = f64;
-pub type Y = f64;
-pub type Radius = f64;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct EqModel {
