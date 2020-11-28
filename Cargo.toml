@@ -24,6 +24,7 @@ yew-components = ["yew", "js"]
 
 [dependencies]
 scales = "^0.1.3"
+derivative = "^2.1.1"
 wasm-bindgen = { version = "0.2", optional = true }
 js-sys = { version = "0.3", optional = true }
 web-sys = { version = "0.3", optional = true, features = [

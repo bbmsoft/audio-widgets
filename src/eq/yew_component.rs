@@ -2,6 +2,7 @@ use crate::eq::*;
 use crate::js_utils::*;
 use crate::utils::*;
 use crate::*;
+use derivative::*;
 use scales::prelude::*;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
@@ -21,29 +22,18 @@ pub struct ParametricEq {
     render_callback: Closure<dyn FnMut()>,
     needs_repaint: bool,
 }
-
-#[derive(Debug, Clone, Properties)]
+#[derive(Derivative, Properties)]
+#[derivative(Debug, Clone, PartialEq)]
 pub struct Props {
     pub id: String,
     pub eq: EqModel,
+    #[derivative(PartialEq = "ignore")]
     pub on_input: Callback<(usize, Parameter)>,
     pub width: f64,
     pub height: f64,
     pub show_minor_grid: bool,
     pub show_band_curves: bool,
     pub show_tooltip: bool,
-}
-
-impl PartialEq for Props {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-            && self.eq == other.eq
-            && self.width == other.width
-            && self.height == other.height
-            && self.show_minor_grid == other.show_minor_grid
-            && self.show_band_curves == other.show_band_curves
-            && self.show_tooltip == other.show_tooltip
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

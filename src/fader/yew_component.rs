@@ -4,6 +4,7 @@ use crate::js_utils::*;
 use crate::scale::ScaleModel;
 use crate::utils::*;
 use crate::*;
+use derivative::*;
 use scales::prelude::*;
 use std::fmt::Debug;
 use wasm_bindgen::prelude::*;
@@ -25,10 +26,12 @@ pub struct Fader {
     background: NodeRef,
 }
 
-#[derive(Debug, Clone, PartialEq, Properties)]
+#[derive(Derivative, Properties)]
+#[derivative(Debug, Clone, PartialEq)]
 pub struct Props {
     pub id: String,
     pub fader: FaderModel,
+    #[derivative(PartialEq = "ignore")]
     pub on_input: Callback<FaderValue>,
     pub show_tooltip: bool,
     pub label: String,
@@ -291,8 +294,12 @@ impl Component for Fader {
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.props = props;
-        false
+        if props != self.props {
+            self.props = props;
+            true
+        } else {
+            false
+        }
     }
 
     fn view(&self) -> Html {

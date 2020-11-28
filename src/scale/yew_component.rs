@@ -1,24 +1,28 @@
+use super::{CanvasScaleRenderer, ScaleModel};
 use crate::*;
+use derivative::*;
 use web_sys::*;
 use yew::prelude::*;
 
-use super::{CanvasScaleRenderer, ScaleModel};
-
 #[derive(Debug, Clone, PartialEq)]
-pub struct Scale<S: scales::prelude::Scale<f64> + Clone> {
+pub struct Scale<S: scales::prelude::Scale<f64> + Clone + PartialEq + std::fmt::Debug> {
     props: Props<S>,
     renderer: Option<CanvasScaleRenderer>,
 }
 
-#[derive(Debug, Clone, PartialEq, Properties)]
-pub struct Props<S: scales::prelude::Scale<f64> + Clone> {
+#[derive(Derivative, Properties)]
+#[derivative(Debug, Clone, PartialEq)]
+pub struct Props<S: scales::prelude::Scale<f64> + Clone + PartialEq + std::fmt::Debug> {
     pub scale: ScaleModel<S>,
+    #[derivative(PartialEq = "ignore")]
     pub canvas: NodeRef,
     pub draw_labels: bool,
     pub bounds: Option<Bounds>,
 }
 
-impl<S: scales::prelude::Scale<f64> + Clone + 'static> Component for Scale<S> {
+impl<S: scales::prelude::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Component
+    for Scale<S>
+{
     type Message = ();
 
     type Properties = Props<S>;
@@ -34,9 +38,13 @@ impl<S: scales::prelude::Scale<f64> + Clone + 'static> Component for Scale<S> {
         false
     }
 
-    fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.props = props;
-        true
+    fn change(&mut self, props: Props<S>) -> ShouldRender {
+        if props != self.props {
+            self.props = props;
+            true
+        } else {
+            false
+        }
     }
 
     fn view(&self) -> Html {
@@ -45,9 +53,7 @@ impl<S: scales::prelude::Scale<f64> + Clone + 'static> Component for Scale<S> {
         }
     }
 
-    fn rendered(&mut self, first_render: bool) {
-        // TODO prevent scale from being re-rendered if canvas has not changed
-        // if first_render {
+    fn rendered(&mut self, _first_render: bool) {
         if let (Some(canvas), Some(bounds)) = (
             self.props.canvas.cast::<HtmlCanvasElement>(),
             self.props.bounds.as_ref(),
@@ -62,6 +68,5 @@ impl<S: scales::prelude::Scale<f64> + Clone + 'static> Component for Scale<S> {
                 renderer.render_to_canvas(&self.props.scale);
             }
         }
-        // }
     }
 }
