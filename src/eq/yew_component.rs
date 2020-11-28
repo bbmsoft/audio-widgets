@@ -22,7 +22,7 @@ pub struct ParametricEq {
     needs_repaint: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Properties)]
+#[derive(Debug, Clone, Properties)]
 pub struct Props {
     pub id: String,
     pub eq: EqModel,
@@ -32,6 +32,18 @@ pub struct Props {
     pub show_minor_grid: bool,
     pub show_band_curves: bool,
     pub show_tooltip: bool,
+}
+
+impl PartialEq for Props {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.eq == other.eq
+            && self.width == other.width
+            && self.height == other.height
+            && self.show_minor_grid == other.show_minor_grid
+            && self.show_band_curves == other.show_band_curves
+            && self.show_tooltip == other.show_tooltip
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -125,8 +137,12 @@ impl Component for ParametricEq {
             self.ext_props = Some(props);
             false
         } else {
-            self.props = props;
-            true
+            if props != self.props {
+                self.props = props;
+                true
+            } else {
+                false
+            }
         }
     }
 

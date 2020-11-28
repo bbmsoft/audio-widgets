@@ -8,7 +8,11 @@ pub fn get_style(
     style: &Option<CssStyleDeclaration>,
     default: Option<&str>,
 ) -> Option<String> {
-    let prop = style.as_ref()?.get_property_value(style_name.as_ref()).ok();
+    let prop = style
+        .as_ref()?
+        .get_property_value(style_name.as_ref())
+        .ok()
+        .and_then(|v| if v.is_empty() { None } else { Some(v) });
     prop.or(default.map(|s| s.to_owned()))
 }
 
@@ -105,4 +109,15 @@ impl<DR: AsRef<DomRect>> From<DR> for Bounds {
             height: dr.height(),
         }
     }
+}
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    pub fn log(a: &str);
+}
+
+#[macro_export]
+macro_rules! console_log {
+    ($($t:tt)*) => (#[allow(unused_unsafe)]unsafe{log(&format_args!($($t)*).to_string())})
 }

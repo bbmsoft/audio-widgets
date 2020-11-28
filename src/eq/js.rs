@@ -162,13 +162,7 @@ impl CanvasEqRenderer {
         if self.band_curves {
             for (i, (band, active)) in graph.band_curves.iter().enumerate() {
                 context.begin_path();
-                let style = if *active {
-                    self.style.band_strokes[i]
-                        .as_ref()
-                        .or(self.style.band_stroke.as_ref())
-                } else {
-                    self.style.band_disabled_stroke.as_ref()
-                };
+                let style = self.get_band_stroke(i, *active);
                 set_stroke(context, style);
                 stroke_curve(&band, &context);
                 context.stroke();
@@ -211,6 +205,17 @@ impl CanvasEqRenderer {
                 context.fill();
             }
         }
+    }
+
+    fn get_band_stroke(&self, i: usize, active: bool) -> Option<&String> {
+        let stroke = if active {
+            self.style.band_strokes[i]
+                .as_ref()
+                .or(self.style.band_stroke.as_ref())
+        } else {
+            self.style.band_disabled_stroke.as_ref()
+        };
+        stroke
     }
 }
 
