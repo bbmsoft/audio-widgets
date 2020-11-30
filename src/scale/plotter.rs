@@ -1,15 +1,15 @@
 use crate::scale::*;
-use crate::utils::*;
 use crate::*;
 use scales::prelude::Converter;
 use scales::prelude::LinearScale;
 
-pub fn plot_scale<S: scales::Scale<f64> + std::fmt::Debug>(
+pub fn plot_scale<S: scales::Scale<f64>>(
     scale: &ScaleModel<S>,
     offset: f64,
     range: f64,
     length: f64,
     invert_y: bool,
+    label_format: Option<&LabelFormat>,
 ) -> ScaleGraph {
     let pixel_scale = pixel_scale_for_layout(&scale.layout, offset, range, invert_y);
 
@@ -30,12 +30,18 @@ pub fn plot_scale<S: scales::Scale<f64> + std::fmt::Debug>(
     let default_value = scale
         .default_value
         .map(|dv| line(dv, &converter, &scale.layout, length));
-    let labels = labels(
-        &scale.major_scale_markers,
-        &converter,
-        &scale.layout,
-        length,
-    );
+
+    let labels = if let Some(format) = label_format {
+        labels(
+            &scale.major_scale_markers,
+            &converter,
+            &scale.layout,
+            length,
+            format,
+        )
+    } else {
+        vec![]
+    };
 
     ScaleGraph {
         major_lines,
@@ -45,9 +51,9 @@ pub fn plot_scale<S: scales::Scale<f64> + std::fmt::Debug>(
     }
 }
 
-fn lines(
+fn lines<S: scales::Scale<f64>>(
     markers: &Vec<f64>,
-    converter: &impl Converter<f64, f64>,
+    converter: &(&S, &LinearScale<f64>),
     orientation: &Layout,
     length: f64,
 ) -> Vec<Line> {
@@ -80,15 +86,16 @@ fn line(
     }
 }
 
-fn labels(
+fn labels<S: scales::Scale<f64>>(
     markers: &Vec<f64>,
-    converter: &impl Converter<f64, f64>,
+    converter: &(&S, &LinearScale<f64>),
     orientation: &Layout,
     length: f64,
+    format: &LabelFormat,
 ) -> Vec<Label> {
     markers
         .iter()
-        .map(|m| label(*m, converter, orientation, length))
+        .map(|m| label(*m, converter, orientation, length, format))
         .collect()
 }
 
@@ -97,6 +104,7 @@ fn label(
     converter: &impl Converter<f64, f64>,
     orientation: &Layout,
     length: f64,
+    format: &LabelFormat,
 ) -> Label {
     let v = converter.convert(marker).floor();
     match orientation {
@@ -104,25 +112,25 @@ fn label(
             value: marker,
             x: v,
             y: 0.0,
-            text: format_gain_short(marker),
+            text: format.format(marker),
         },
         Layout::Horizontal(HorizontalPosition::Bottom) => Label {
             value: marker,
             x: v,
             y: length,
-            text: format_gain_short(marker),
+            text: format.format(marker),
         },
         Layout::Vertical(VerticalPosition::Left) => Label {
             value: marker,
             x: 0.0,
             y: v,
-            text: format_gain_short(marker),
+            text: format.format(marker),
         },
         Layout::Vertical(VerticalPosition::Right) => Label {
             value: marker,
             x: length,
             y: v,
-            text: format_gain_short(marker),
+            text: format.format(marker),
         },
     }
 }

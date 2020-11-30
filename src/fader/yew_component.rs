@@ -24,6 +24,7 @@ pub struct Fader {
     layout_callback: Closure<dyn FnMut()>,
     needs_layout: bool,
     background: NodeRef,
+    pub scale_label_format: Option<LabelFormat>,
 }
 
 #[derive(Derivative, Properties)]
@@ -58,7 +59,7 @@ impl Fader {
         html! {
             <table>
                 <tr>
-                    <td>{format!("{}: ", label)}</td> <td>{format_gain(gain)}</td>
+                    <td>{format!("{}: ", label)}</td> <td>{format_gain(gain, true)}</td>
                 </tr>
             </table>
         }
@@ -259,6 +260,12 @@ impl Component for Fader {
         mouse_moved.forget();
         mouse_up.forget();
 
+        let scale_label_format = if props.show_tooltip {
+            Some(LabelFormat::GainShort(false))
+        } else {
+            None
+        };
+
         Fader {
             props: props.clone(),
             ext_props: None,
@@ -271,6 +278,7 @@ impl Component for Fader {
             layout_callback,
             needs_layout: false,
             background: NodeRef::default(),
+            scale_label_format,
         }
     }
 
@@ -310,7 +318,7 @@ impl Component for Fader {
         let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
 
         let scale = self.props.scale.clone();
-        let draw_labels = self.props.draw_scale_labels;
+        let label_format = self.scale_label_format.clone();
 
         let background = self.background.clone();
         let scale_bounds = self.scale_bounds();
@@ -329,7 +337,9 @@ impl Component for Fader {
             >
                 <div class="fader-background" ref={background}>
                     <span class="track"></span>
-                    <crate::scale::Scale<BrokenScale<f64>>scale={scale} show_labels={draw_labels} bounds={background_bounds} offset={offset} range={range} />
+                    <svg class="scale" width={background_bounds.as_ref().map(|b|b.width).unwrap_or(0.0)} height={background_bounds.as_ref().map(|b|b.height).unwrap_or(0.0)}>
+                        <scale::Scale<BrokenScale<f64>> scale={scale} label_format={label_format} bounds={background_bounds} offset={offset} range={range} />
+                    </svg>
                 </div>
                 <span class="knob" ref=self.knob.clone()></span>
                 {

@@ -12,10 +12,10 @@ pub struct Scale<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug> {
 #[derive(Debug, Clone, PartialEq, Properties)]
 pub struct Props<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug> {
     pub scale: ScaleModel<S>,
-    pub show_labels: bool,
     pub bounds: Option<Bounds>,
     pub offset: Option<Y>,
     pub range: Option<Y>,
+    pub label_format: Option<LabelFormat>,
 }
 
 impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Component for Scale<S> {
@@ -46,31 +46,29 @@ impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Comp
             None => return html! {},
         };
 
-        let offset = self
-            .props
-            .offset
-            .or(match self.props.scale.layout {
-                scale::Layout::Horizontal(_) => self.props.bounds.as_ref().map(|b| b.x),
-                scale::Layout::Vertical(_) => self.props.bounds.as_ref().map(|b| b.y),
-            })
-            .unwrap_or(0.0);
+        let offset = self.props.offset.unwrap_or(0.0);
 
         let range = self
             .props
             .range
-            .or(match self.props.scale.layout {
-                scale::Layout::Horizontal(_) => self.props.bounds.as_ref().map(|b| b.width),
-                scale::Layout::Vertical(_) => self.props.bounds.as_ref().map(|b| b.height),
-            })
-            .unwrap_or(256.0);
+            .unwrap_or_else(|| match self.props.scale.layout {
+                scale::Layout::Horizontal(_) => bounds.width,
+                scale::Layout::Vertical(_) => bounds.height,
+            });
 
         let length = match self.props.scale.layout {
-            scale::Layout::Horizontal(_) => self.props.bounds.as_ref().map(|b| b.height),
-            scale::Layout::Vertical(_) => self.props.bounds.as_ref().map(|b| b.width),
-        }
-        .unwrap_or(256.0);
+            scale::Layout::Horizontal(_) => bounds.height,
+            scale::Layout::Vertical(_) => bounds.width,
+        };
 
-        let graph = plot_scale(&self.props.scale, offset, range, length, true);
+        let graph = plot_scale(
+            &self.props.scale,
+            offset,
+            range,
+            length,
+            true,
+            self.props.label_format.as_ref(),
+        );
 
         let major_lines = svg_lines(graph.major_lines.iter().map(|l| (l, "major-scale")));
         let minor_lines = svg_lines(graph.minor_lines.iter().map(|l| (l, "minor-scale")));
@@ -81,30 +79,27 @@ impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Comp
             .map(|l| svg_line(l, "default-value"))
             .unwrap_or_else(|| html! {});
 
-        let labels = if self.props.show_labels {
-            svg_labels(graph.labels.iter().map(|l| {
-                let is_default = self
-                    .props
-                    .scale
-                    .default_value
-                    .map_or(false, |v| v == l.value);
-                let class = if is_default {
-                    "scale-label default-value"
-                } else {
-                    "scale-label"
-                };
-                (l, class)
-            }))
-        } else {
-            vec![]
-        };
+        let labels = svg_labels(graph.labels.iter().map(|l| {
+            let is_default = self
+                .props
+                .scale
+                .default_value
+                .map_or(false, |v| v == l.value);
+            let class = if is_default {
+                "scale-label default-value-label"
+            } else {
+                "scale-label"
+            };
+            (l, class)
+        }));
+
         html! {
-            <svg class="scale" width={bounds.width} height={bounds.height}>
+            <>
                 {major_lines}
                 {minor_lines}
                 {default_value}
                 {labels}
-            </svg>
+            </>
         }
     }
 }

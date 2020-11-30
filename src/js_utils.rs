@@ -16,18 +16,6 @@ pub fn get_style(
     prop.or(default.map(|s| s.to_owned()))
 }
 
-pub fn get_font_size(style: &Option<CssStyleDeclaration>) -> Option<usize> {
-    style
-        .as_ref()?
-        .get_property_value("font-size")
-        .ok()?
-        .split("px")
-        .next()?
-        .to_owned()
-        .parse()
-        .ok()
-}
-
 pub fn set_fill(context: &CanvasRenderingContext2d, style: Option<impl AsRef<str>>) {
     if let Some(style) = style {
         context.set_fill_style(&style.as_ref().into());
@@ -38,10 +26,6 @@ pub fn set_stroke(context: &CanvasRenderingContext2d, style: Option<impl AsRef<s
     if let Some(style) = style {
         context.set_stroke_style(&style.as_ref().into());
     }
-}
-
-pub fn set_font(context: &CanvasRenderingContext2d, style: &str) {
-    context.set_font(style);
 }
 
 pub fn request_animation_frame(f: &Closure<dyn FnMut()>) {
@@ -78,17 +62,6 @@ pub fn register_global_listener(event_type: &str, listener: &Closure<dyn Fn(Mous
     let doc = document();
     doc.add_event_listener_with_callback(event_type, listener.as_ref().unchecked_ref())
         .expect("registering listener failed");
-}
-
-pub fn format_font(font_size: &Option<usize>, font_family: &Option<impl AsRef<str>>) -> String {
-    let font_size: String = font_size
-        .map(|v| format!("{}px", v))
-        .unwrap_or_else(|| "11pt".to_owned());
-    let font_family: &str = font_family
-        .as_ref()
-        .map(|v| v.as_ref())
-        .unwrap_or("sans-serif");
-    format!("{} {}", font_size, font_family)
 }
 
 fn window() -> web_sys::Window {

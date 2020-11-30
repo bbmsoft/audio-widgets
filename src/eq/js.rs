@@ -7,9 +7,6 @@ use web_sys::HtmlCanvasElement;
 
 pub struct CanvasEqRenderer {
     pub context: CanvasRenderingContext2d,
-    pub major_gain_markers: Vec<f64>,
-    pub minor_gain_markers: Vec<f64>,
-    pub minor_grid: bool,
     pub band_curves: bool,
     pub style: Style,
     pub geometry: Geometry,
@@ -17,9 +14,6 @@ pub struct CanvasEqRenderer {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Style {
-    background_fill: Option<String>,
-    major_grid_stroke: Option<String>,
-    minor_grid_stroke: Option<String>,
     band_stroke: Option<String>,
     band_strokes: Vec<Option<String>>,
     band_disabled_stroke: Option<String>,
@@ -37,13 +31,7 @@ pub struct Geometry {
 }
 
 impl CanvasEqRenderer {
-    pub fn new(
-        canvas: HtmlCanvasElement,
-        major_gain_markers: Vec<f64>,
-        minor_gain_markers: Vec<f64>,
-        minor_grid: bool,
-        band_curves: bool,
-    ) -> Option<CanvasEqRenderer> {
+    pub fn new(canvas: HtmlCanvasElement, band_curves: bool) -> Option<CanvasEqRenderer> {
         let context = get_context_2d(&canvas)?;
         let style = get_styles(&canvas);
 
@@ -52,9 +40,6 @@ impl CanvasEqRenderer {
 
         let geometry = Geometry { width, height };
 
-        let background_fill = get_style("--background-fill", &style, Some("black"));
-        let major_grid_stroke = get_style("--major-grid-stroke", &style, Some("#333"));
-        let minor_grid_stroke = get_style("--minor-grid-stroke", &style, Some("#222"));
         let band_stroke = get_style("--band-stroke", &style, Some("#88f6"));
         let band_strokes = (0..10)
             .map(|i| {
@@ -75,9 +60,6 @@ impl CanvasEqRenderer {
         let sum_fill = get_style("--sum-fill", &style, Some("#88f6"));
 
         let style = Style {
-            background_fill,
-            major_grid_stroke,
-            minor_grid_stroke,
             band_stroke,
             band_strokes,
             band_disabled_stroke,
@@ -90,61 +72,10 @@ impl CanvasEqRenderer {
 
         Some(CanvasEqRenderer {
             context,
-            major_gain_markers,
-            minor_gain_markers,
-            minor_grid,
             band_curves,
             geometry,
             style,
         })
-    }
-
-    pub fn render_grid_to_canvas(&self, eq: &EqModel) {
-        let context = &self.context;
-
-        let width = self.geometry.width;
-        let height = self.geometry.height;
-
-        set_fill(&context, self.style.background_fill.as_ref());
-        context.fill_rect(0.0, 0.0, width, height);
-
-        let y_conv = eq.y_to_gain_converter(height, true);
-
-        if self.minor_grid {
-            set_stroke(&context, self.style.minor_grid_stroke.as_ref());
-            context.begin_path();
-
-            for x in eq.calc_minor_frequency_grid_markers(width) {
-                let x = x.floor() + 0.5;
-                context.move_to(x, 0.0);
-                context.line_to(x, height);
-            }
-
-            for g in &self.minor_gain_markers {
-                let y = y_conv.convert_back(*g).floor() + 0.5;
-                context.move_to(0.0, y);
-                context.line_to(width, y);
-            }
-
-            context.stroke();
-        }
-
-        set_stroke(&context, self.style.major_grid_stroke.as_ref());
-        context.begin_path();
-
-        for x in eq.calc_major_frequency_grid_markers(width) {
-            let x = x.floor() + 0.5;
-            context.move_to(x, 0.0);
-            context.line_to(x, height);
-        }
-
-        for g in &self.major_gain_markers {
-            let y = y_conv.convert_back(*g).floor() + 0.5;
-            context.move_to(0.0, y);
-            context.line_to(width, y);
-        }
-
-        context.stroke();
     }
 
     pub fn render_to_canvas(&self, eq: &EqModel) {
@@ -158,6 +89,8 @@ impl CanvasEqRenderer {
         let q_conv = eq.q_to_radius_converter(width);
 
         let graph = eq.plot(width, height, true);
+
+        context.clear_rect(0.0, 0.0, width, height);
 
         if self.band_curves {
             for (i, (band, active)) in graph.band_curves.iter().enumerate() {

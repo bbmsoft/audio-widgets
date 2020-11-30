@@ -1,4 +1,4 @@
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 pub mod compressor;
 pub mod eq;
@@ -29,6 +29,7 @@ pub type MeterValue = f64;
 pub type PeakValue = f64;
 pub type Update = (MeterValue, PeakValue);
 pub type ScaleValue = f64;
+pub type ShowUnit = bool;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bounds {
@@ -52,4 +53,25 @@ pub struct Label {
     x: X,
     y: Y,
     text: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum LabelFormat {
+    Frequency(ShowUnit),
+    FrequencyShort(ShowUnit),
+    Gain(ShowUnit),
+    GainShort(ShowUnit),
+    Q,
+}
+
+impl LabelFormat {
+    pub fn format(&self, value: f64) -> String {
+        match self {
+            LabelFormat::Frequency(unit) => utils::format_frequency(value, *unit),
+            LabelFormat::FrequencyShort(unit) => utils::format_frequency_short(value, *unit),
+            LabelFormat::Gain(unit) => utils::format_gain(value, *unit),
+            LabelFormat::GainShort(unit) => utils::format_gain_short(value, *unit),
+            LabelFormat::Q => utils::format_q(value),
+        }
+    }
 }

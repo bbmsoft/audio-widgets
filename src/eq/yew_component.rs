@@ -1,12 +1,25 @@
 use crate::eq::*;
 use crate::js_utils::*;
+use crate::scale::*;
 use crate::utils::*;
 use crate::*;
 use derivative::*;
+use scales::prelude::LinearScale;
+use scales::prelude::LogarithmicScale;
 use scales::prelude::*;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 use yew::prelude::*;
+
+const MAJOR_GAIN_MARKERS: [f64; 7] = [-18.0, -12.0, -6.0, 0.0, 6.0, 12.0, 18.0];
+const MINOR_GAIN_MARKERS: [f64; 8] = [-21.0, -15.0, -9.0, -3.0, 3.0, 9.0, 15.0, 21.0];
+
+const MAJOR_FREQUENCY_MARKERS: [f64; 4] = [10.0, 100.0, 1_000.0, 10_000.0];
+const MINOR_FREQUENCY_MARKERS: [f64; 41] = [
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0,
+    200.0, 300.0, 400.0, 500.0, 600.0, 700.0, 800.0, 900.0, 2000.0, 3000.0, 4000.0, 5000.0, 6000.0,
+    7000.0, 8000.0, 9000.0, 20000.0, 30000.0, 40000.0, 50000.0, 60000.0, 70000.0, 80000.0, 90000.0,
+];
 
 pub struct ParametricEq {
     props: Props,
@@ -22,6 +35,7 @@ pub struct ParametricEq {
     render_callback: Closure<dyn FnMut()>,
     needs_repaint: bool,
     tool_tip_content: Html,
+    container: NodeRef,
 }
 #[derive(Derivative, Properties)]
 #[derivative(Debug, Clone, PartialEq)]
@@ -96,6 +110,7 @@ impl Component for ParametricEq {
             render_callback,
             needs_repaint: false,
             tool_tip_content: html! {},
+            container: NodeRef::default(),
         }
     }
 
@@ -150,11 +165,43 @@ impl Component for ParametricEq {
         let right_click_callback = self.link.callback(|e| Msg::RightClick(e));
         let wheel_callback = self.link.callback(|e| Msg::Wheel(e));
         let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
-        let width = self.props.width;
-        let height = self.props.height;
+
+        let bounds: Option<Bounds> = self
+            .container
+            .cast::<HtmlElement>()
+            .map(|c| c.get_bounding_client_rect().into());
+
+        let width = bounds.as_ref().map(|b| b.width).unwrap_or(100.0);
+        let height = bounds.as_ref().map(|b| b.height).unwrap_or(100.0);
+
+        let eq = &self.props.eq;
+
+        let freq_scale = ScaleModel::new(
+            eq.x_to_frequency_converter(width).1,
+            scale::Layout::Horizontal(scale::HorizontalPosition::Top),
+            None,
+            filter(&MAJOR_FREQUENCY_MARKERS, eq.min_frequency, eq.max_frequency),
+            filter(&MINOR_FREQUENCY_MARKERS, eq.min_frequency, eq.max_frequency),
+        );
+
+        let gain_scale = ScaleModel::new(
+            eq.y_to_gain_converter(height, true).1,
+            scale::Layout::Vertical(scale::VerticalPosition::Left),
+            Some(0.0),
+            filter(&MAJOR_GAIN_MARKERS, eq.min_gain, eq.max_gain),
+            filter(&MINOR_GAIN_MARKERS, eq.min_gain, eq.max_gain),
+        );
+
+        let offset = None;
+        let range_x = None;
+        let range_y = None;
 
         html! {
-            <div class="eq-container">
+            <div class="eq" ref={self.container.clone()}>
+                <svg class="scale" width={width} height={height}>
+                    <scale::Scale<LogarithmicScale<f64>> scale={freq_scale} label_format={Some(LabelFormat::FrequencyShort(true))} bounds={bounds.clone()} offset={offset} range={range_x} />
+                    <scale::Scale<LinearScale<f64>> scale={gain_scale} label_format={Some(LabelFormat::GainShort(true))} bounds={bounds} offset={offset} range={range_y} />
+                </svg>
                 <canvas
                     id={self.props.id.clone()}
                     onmousedown={mouse_down_callback}
@@ -183,28 +230,16 @@ impl Component for ParametricEq {
     }
 
     fn rendered(&mut self, first_render: bool) {
-        if first_render {
-            if let Some(canvas) = self.canvas.cast::<HtmlCanvasElement>() {
-                let rect = canvas.get_bounding_client_rect();
-                self.position = Some((rect.x(), rect.y()));
-                // TODO make grid markers properties
-                let major_gain_markers = vec![-6.0, 0.0, 6.0];
-                let minor_gain_markers = vec![-9.0, -3.0, 3.0, -9.0];
-                self.renderer = CanvasEqRenderer::new(
-                    canvas,
-                    major_gain_markers,
-                    minor_gain_markers,
-                    self.props.show_minor_grid,
-                    self.props.show_band_curves,
-                );
-            } else {
-                self.position = None;
-            };
+        if let Some(canvas) = self.canvas.cast::<HtmlCanvasElement>() {
+            let rect = canvas.get_bounding_client_rect();
+            self.position = Some((rect.x(), rect.y()));
+            self.renderer = CanvasEqRenderer::new(canvas, self.props.show_band_curves);
         } else {
-            if let Some(renderer) = self.renderer.as_mut() {
-                renderer.minor_grid = self.props.show_minor_grid;
-                renderer.band_curves = self.props.show_band_curves;
-            }
+            self.position = None;
+        };
+
+        if first_render {
+            self.link.send_message(Msg::Refresh);
         }
 
         if !self.needs_repaint {
@@ -218,7 +253,6 @@ impl ParametricEq {
     fn render(&mut self) {
         self.needs_repaint = false;
         if let Some(renderer) = &self.renderer {
-            renderer.render_grid_to_canvas(&self.props.eq);
             renderer.render_to_canvas(&self.props.eq);
             self.update_tooltip();
         }
@@ -508,43 +542,62 @@ impl ParametricEq {
 
 fn format_band(band: &EqBand) -> Html {
     match band {
-        EqBand::Bell { frequency, gain, q } => html! {
-            <table>
-                <tr>
-                    <td>{"Freq:"}</td> <td>{format_frequency(*frequency)}</td>
-                </tr>
-                <tr>
-                    <td>{"Gain: "}</td> <td>{format_gain(*gain)}</td>
-                </tr>
-                <tr>
-                    <td>{"Q: "}</td> <td>{format!("{:.*}", 2 - (q.log10().ceil() as usize), q)}</td>
-                </tr>
-            </table>
-        },
+        EqBand::Bell { frequency, gain, q } => format_bell(*frequency, *gain, *q),
         EqBand::HighShelf { frequency, gain } | EqBand::LowShelf { frequency, gain } => {
-            html! {
-                <table>
-                    <tr>
-                        <td>{"Freq:"}</td> <td>{format_frequency(*frequency)}</td>
-                    </tr>
-                    <tr>
-                        <td>{"Gain: "}</td> <td>{format!("{:.1}", gain)}{" dB"}</td>
-                    </tr>
-                </table>
-            }
+            format_shelf(*frequency, *gain)
         }
         EqBand::HighPass { frequency, slope } | EqBand::LowPass { frequency, slope } => {
-            html! {
-                <table>
-                    <tr>
-                        <td>{"Freq:"}</td> <td>{format_frequency(*frequency)}</td>
-                    </tr>
-                    <tr>
-                        <td>{"Slope:"}</td> <td>{format!("{}", slope)}{" dB/oct"}</td>
-                    </tr>
-                </table>
-            }
+            format_pass(*frequency, *slope)
         }
+    }
+}
+
+fn format_bell(frequency: Frequency, gain: Gain, q: Q) -> Html {
+    let frequency = format_frequency(frequency, true);
+    let gain = format_frequency(gain, true);
+    let q = format_frequency(q, true);
+    html! {
+        <table>
+            <tr>
+                <td>{"Freq:"}</td> <td>{frequency}</td>
+            </tr>
+            <tr>
+                <td>{"Gain: "}</td> <td>{gain}</td>
+            </tr>
+            <tr>
+                <td>{"Q: "}</td> <td>{q}</td>
+            </tr>
+        </table>
+    }
+}
+
+fn format_shelf(frequency: Frequency, gain: Gain) -> Html {
+    let frequency = format_frequency(frequency, true);
+    let gain = format_frequency(gain, true);
+    html! {
+        <table>
+            <tr>
+                <td>{"Freq:"}</td> <td>{frequency}</td>
+            </tr>
+            <tr>
+                <td>{"Gain: "}</td> <td>{gain}</td>
+            </tr>
+        </table>
+    }
+}
+
+fn format_pass(frequency: Frequency, slope: Slope) -> Html {
+    let frequency = format_frequency(frequency, true);
+    let slope = format!("{} db/oct", slope);
+    html! {
+        <table>
+            <tr>
+                <td>{"Freq:"}</td> <td>{frequency}</td>
+            </tr>
+            <tr>
+                <td>{"Slope:"}</td> <td>{slope}</td>
+            </tr>
+        </table>
     }
 }
 
@@ -591,4 +644,11 @@ fn position_tooltip(
         .style()
         .set_property("top", &format!("{}px", top))
         .unwrap();
+}
+
+fn filter<'a>(markers: &[f64], min: f64, max: f64) -> Vec<f64> {
+    markers
+        .iter()
+        .filter_map(|m| if &min < m && m < &max { Some(*m) } else { None })
+        .collect()
 }
