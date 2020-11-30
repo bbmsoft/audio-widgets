@@ -27,6 +27,17 @@ pub fn format_gain(gain: f64) -> String {
     }
 }
 
+pub fn format_gain_short(gain: f64) -> String {
+    let abs = gain.abs();
+    if gain > 0.0 {
+        format!("+{:.*}", 0, abs)
+    } else if gain < 0.0 {
+        format!("-{:.*}", 0, abs)
+    } else {
+        format!("{:.*}", 0, abs)
+    }
+}
+
 pub trait Ignore {
     fn ignore(self);
 }

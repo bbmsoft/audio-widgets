@@ -74,29 +74,17 @@ impl CanvasScaleRenderer {
 
         self.context.clear_rect(left, top, width, height);
 
-        match &scale.layout.orientation {
-            Orientation::Horizontal(HorizontalLayout::Top) => {
+        match &scale.layout {
+            Layout::Horizontal(HorizontalPosition::Top) => {
                 self.render_top_scale(scale);
             }
-            Orientation::Horizontal(HorizontalLayout::TopCentered) => {
-                self.render_top_centered_scale(scale);
-            }
-            Orientation::Horizontal(HorizontalLayout::BottomCentered) => {
-                self.render_bottom_centered_scale(scale);
-            }
-            Orientation::Horizontal(HorizontalLayout::Bottom) => {
+            Layout::Horizontal(HorizontalPosition::Bottom) => {
                 self.render_bottom_scale(scale);
             }
-            Orientation::Vertical(VerticalLayout::Left) => {
+            Layout::Vertical(VerticalPosition::Left) => {
                 self.render_left_scale(scale);
             }
-            Orientation::Vertical(VerticalLayout::LeftCentered) => {
-                self.render_left_centered_scale(scale);
-            }
-            Orientation::Vertical(VerticalLayout::RightCentered) => {
-                self.render_right_centered_scale(scale);
-            }
-            Orientation::Vertical(VerticalLayout::Right) => {
+            Layout::Vertical(VerticalPosition::Right) => {
                 self.render_right_scale(scale);
             }
         }
@@ -199,12 +187,12 @@ impl CanvasScaleRenderer {
         let pixel_scale = LinearScale::inverted(top, bottom);
         let conv = (&scale.scale, &pixel_scale);
 
-        let major_length = scale.layout.major_line_length.floor();
+        let major_length = width;
         let major_offset = (width - major_length).max(0.0) / 2.0;
         let major_left = left + major_offset;
         let major_right = major_left + major_length;
 
-        let minor_length = scale.layout.minor_line_length.floor();
+        let minor_length = width - 10.0;
         let minor_offset = (width - minor_length).max(0.0) / 2.0;
         let minor_left = left + minor_offset;
         let minor_right = minor_left + minor_length;

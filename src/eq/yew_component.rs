@@ -21,6 +21,7 @@ pub struct ParametricEq {
     renderer: Option<CanvasEqRenderer>,
     render_callback: Closure<dyn FnMut()>,
     needs_repaint: bool,
+    tool_tip_content: Html,
 }
 #[derive(Derivative, Properties)]
 #[derivative(Debug, Clone, PartialEq)]
@@ -94,6 +95,7 @@ impl Component for ParametricEq {
             renderer: None,
             render_callback,
             needs_repaint: false,
+            tool_tip_content: html! {},
         }
     }
 
@@ -114,6 +116,7 @@ impl Component for ParametricEq {
             Msg::Wheel(e) => self.handle_wheel(e),
             Msg::Scroll(e) => self.handle_scroll(e),
             Msg::Refresh => {
+                self.update_tooltip();
                 return true;
             }
             Msg::Render => self.render(),
@@ -169,7 +172,7 @@ impl Component for ParametricEq {
                 </canvas>
                 {
                     if self.props.show_tooltip {
-                        let tooltip_text = self.format_tooltip_text();
+                        let tooltip_text = self.tool_tip_content.clone();
                         html!{<span ref=self.tooltip.clone() class="tooltip">{tooltip_text}</span>}
                     } else {
                         html!{}
@@ -441,7 +444,7 @@ impl ParametricEq {
 
         if let Some(tooltip) = self.tooltip.cast::<HtmlElement>() {
             set_style(&tooltip, "opacity", "1");
-            set_style(&tooltip, "visibility", "visible");
+            // set_style(&tooltip, "visibility", "visible");
         }
     }
 
@@ -452,12 +455,12 @@ impl ParametricEq {
 
         if let Some(tooltip) = self.tooltip.cast::<HtmlElement>() {
             set_style(&tooltip, "opacity", "0");
-            set_style(&tooltip, "visibility", "hidden");
+            // set_style(&tooltip, "visibility", "hidden");
         }
     }
 
-    fn update_tooltip(&self) {
-        if !self.props.show_tooltip {
+    fn update_tooltip(&mut self) {
+        if !self.props.show_tooltip || self.active_band.is_none() {
             return;
         }
 
@@ -466,6 +469,8 @@ impl ParametricEq {
             self.tooltip.cast::<HtmlElement>(),
             self.position,
         ) {
+            self.tool_tip_content = self.format_tooltip_text();
+
             let eq = &self.props.eq;
             let band = &eq.bands[index].0;
 

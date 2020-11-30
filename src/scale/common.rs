@@ -2,31 +2,20 @@ use crate::*;
 use scales::prelude::*;
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Layout {
-    pub orientation: Orientation,
-    pub major_line_length: f64,
-    pub minor_line_length: f64,
+pub enum Layout {
+    Horizontal(HorizontalPosition),
+    Vertical(VerticalPosition),
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum Orientation {
-    Horizontal(HorizontalLayout),
-    Vertical(VerticalLayout),
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum HorizontalLayout {
+pub enum HorizontalPosition {
     Top,
-    TopCentered,
-    BottomCentered,
     Bottom,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub enum VerticalLayout {
+pub enum VerticalPosition {
     Left,
-    LeftCentered,
-    RightCentered,
     Right,
 }
 #[derive(Debug, PartialEq, Clone)]
@@ -54,4 +43,11 @@ impl<S: Scale<f64>> ScaleModel<S> {
             default_value,
         }
     }
+}
+
+pub struct ScaleGraph {
+    pub major_lines: Vec<Line>,
+    pub minor_lines: Vec<Line>,
+    pub default_value: Option<Line>,
+    pub labels: Vec<Label>,
 }

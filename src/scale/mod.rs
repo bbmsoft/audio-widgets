@@ -1,4 +1,5 @@
 mod common;
+mod plotter;
 
 pub use crate::scale::common::*;
 

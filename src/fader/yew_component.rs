@@ -163,7 +163,7 @@ impl Fader {
 
         if let Some(tooltip) = self.elements.as_ref().and_then(|s| s.tooltip.as_ref()) {
             set_style(&tooltip, "opacity", "1");
-            set_style(&tooltip, "visibility", "visible");
+            // set_style(&tooltip, "visibility", "visible");
         }
     }
 
@@ -174,7 +174,7 @@ impl Fader {
 
         if let Some(tooltip) = self.elements.as_ref().and_then(|s| s.tooltip.as_ref()) {
             set_style(&tooltip, "opacity", "0");
-            set_style(&tooltip, "visibility", "hidden");
+            // set_style(&tooltip, "visibility", "hidden");
         }
     }
 
@@ -310,14 +310,14 @@ impl Component for Fader {
         let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
 
         let scale = self.props.scale.clone();
-        let canvas = NodeRef::default();
         let draw_labels = self.props.draw_scale_labels;
 
         let background = self.background.clone();
         let scale_bounds = self.scale_bounds();
         let background_bounds = self.background_bounds();
-        let canvas_width = background_bounds.as_ref().map(|b| b.width).unwrap_or(0.0);
-        let canvas_height = &background_bounds.as_ref().map(|b| b.height).unwrap_or(0.0);
+
+        let offset = scale_bounds.as_ref().map(|b| b.y);
+        let range = scale_bounds.as_ref().map(|b| b.height);
 
         html! {
             <div
@@ -329,8 +329,7 @@ impl Component for Fader {
             >
                 <div class="fader-background" ref={background}>
                     <span class="track"></span>
-                    <canvas class="scale" width={canvas_width} height={canvas_height} ref={canvas.clone()} />
-                    <crate::scale::Scale<BrokenScale<f64>>scale={scale} canvas={canvas} draw_labels={draw_labels} bounds={scale_bounds}/>
+                    <crate::scale::Scale<BrokenScale<f64>>scale={scale} show_labels={draw_labels} bounds={background_bounds} offset={offset} range={range} />
                 </div>
                 <span class="knob" ref=self.knob.clone()></span>
                 {
