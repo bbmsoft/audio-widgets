@@ -554,8 +554,8 @@ fn format_band(band: &EqBand) -> Html {
 
 fn format_bell(frequency: Frequency, gain: Gain, q: Q) -> Html {
     let frequency = format_frequency(frequency, true);
-    let gain = format_frequency(gain, true);
-    let q = format_frequency(q, true);
+    let gain = format_gain(gain, true);
+    let q = format_q(q);
     html! {
         <table>
             <tr>
@@ -573,7 +573,7 @@ fn format_bell(frequency: Frequency, gain: Gain, q: Q) -> Html {
 
 fn format_shelf(frequency: Frequency, gain: Gain) -> Html {
     let frequency = format_frequency(frequency, true);
-    let gain = format_frequency(gain, true);
+    let gain = format_gain(gain, true);
     html! {
         <table>
             <tr>
