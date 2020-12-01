@@ -4,12 +4,13 @@ use crate::scale::*;
 use crate::utils::*;
 use crate::*;
 use derivative::*;
-use scales::prelude::LinearScale;
-use scales::prelude::LogarithmicScale;
 use scales::prelude::*;
 use wasm_bindgen::prelude::*;
 use web_sys::*;
 use yew::prelude::*;
+
+pub type FreqScaleModel = ScaleModel<FreqScale>;
+pub type GainScaleModel = ScaleModel<GainScale>;
 
 const MAJOR_GAIN_MARKERS: [f64; 7] = [-18.0, -12.0, -6.0, 0.0, 6.0, 12.0, 18.0];
 const MINOR_GAIN_MARKERS: [f64; 8] = [-21.0, -15.0, -9.0, -3.0, 3.0, 9.0, 15.0, 21.0];
@@ -28,12 +29,11 @@ pub struct ParametricEq {
     canvas: NodeRef,
     tooltip: NodeRef,
     active_band: Option<usize>,
-    position: Option<(X, Y)>,
     last_touch: Option<(X, Y)>,
     touch_interrupted: bool,
     renderer: Option<CanvasEqRenderer>,
-    render_callback: Closure<dyn FnMut()>,
-    needs_repaint: bool,
+    refresh_callback: Closure<dyn FnMut()>,
+    needs_refresh: bool,
     tool_tip_content: Html,
     container: NodeRef,
 }
@@ -44,8 +44,6 @@ pub struct Props {
     pub eq: EqModel,
     #[derivative(PartialEq = "ignore")]
     pub on_input: Callback<(usize, Parameter)>,
-    pub width: f64,
-    pub height: f64,
     pub show_minor_grid: bool,
     pub show_band_curves: bool,
     pub show_tooltip: bool,
@@ -65,7 +63,6 @@ pub enum Msg {
     Wheel(WheelEvent),
     Scroll(Event),
     Refresh,
-    Render,
 }
 
 impl Component for ParametricEq {
@@ -77,8 +74,8 @@ impl Component for ParametricEq {
         let tooltip = NodeRef::default();
 
         let cb_link = link.clone();
-        let render_callback =
-            Closure::wrap(Box::new(move || cb_link.send_message(Msg::Render)) as Box<dyn FnMut()>);
+        let refresh_callback =
+            Closure::wrap(Box::new(move || cb_link.send_message(Msg::Refresh)) as Box<dyn FnMut()>);
 
         let cb_link = link.clone();
         let mouse_moved =
@@ -103,12 +100,11 @@ impl Component for ParametricEq {
             canvas,
             tooltip,
             active_band: None,
-            position: None,
             last_touch: None,
             touch_interrupted: true,
             renderer: None,
-            render_callback,
-            needs_repaint: false,
+            refresh_callback,
+            needs_refresh: false,
             tool_tip_content: html! {},
             container: NodeRef::default(),
         }
@@ -118,7 +114,7 @@ impl Component for ParametricEq {
         match msg {
             Msg::InternalUpdate(index, change) => {
                 self.props.eq.update(index, change);
-                return true;
+                self.request_refresh();
             }
             Msg::MouseDown(e) => self.handle_mouse_down(e),
             Msg::MouseUp(e) => self.handle_mouse_up(e),
@@ -131,10 +127,11 @@ impl Component for ParametricEq {
             Msg::Wheel(e) => self.handle_wheel(e),
             Msg::Scroll(e) => self.handle_scroll(e),
             Msg::Refresh => {
+                self.needs_refresh = false;
+                self.update_tooltip_content();
                 self.update_tooltip();
                 return true;
             }
-            Msg::Render => self.render(),
         }
         false
     }
@@ -143,15 +140,13 @@ impl Component for ParametricEq {
         // don't accept external changes while the EQ widget is being used
         if self.active_band.is_some() {
             self.ext_props = Some(props);
-            false
         } else {
             if props != self.props {
                 self.props = props;
-                true
-            } else {
-                false
+                self.request_refresh();
             }
         }
+        false
     }
 
     fn view(&self) -> Html {
@@ -176,31 +171,20 @@ impl Component for ParametricEq {
 
         let eq = &self.props.eq;
 
-        let freq_scale = ScaleModel::new(
-            eq.x_to_frequency_converter(width).1,
-            scale::Layout::Horizontal(scale::HorizontalPosition::Top),
-            None,
-            filter(&MAJOR_FREQUENCY_MARKERS, eq.min_frequency, eq.max_frequency),
-            filter(&MINOR_FREQUENCY_MARKERS, eq.min_frequency, eq.max_frequency),
-        );
-
-        let gain_scale = ScaleModel::new(
-            eq.y_to_gain_converter(height, true).1,
-            scale::Layout::Vertical(scale::VerticalPosition::Left),
-            Some(0.0),
-            filter(&MAJOR_GAIN_MARKERS, eq.min_gain, eq.max_gain),
-            filter(&MINOR_GAIN_MARKERS, eq.min_gain, eq.max_gain),
-        );
+        let (freq_scale, gain_scale) = scales(eq, width, height);
 
         let offset = None;
         let range_x = None;
         let range_y = None;
 
+        let tool_tip_content = self.tool_tip_content.clone();
+        self.update_tooltip();
+
         html! {
             <div class="eq" ref={self.container.clone()}>
                 <svg class="scale" width={width} height={height}>
-                    <scale::Scale<LogarithmicScale<f64>> scale={freq_scale} label_format={Some(LabelFormat::FrequencyShort(true))} bounds={bounds.clone()} offset={offset} range={range_x} />
-                    <scale::Scale<LinearScale<f64>> scale={gain_scale} label_format={Some(LabelFormat::GainShort(true))} bounds={bounds} offset={offset} range={range_y} />
+                    <scale::Scale<FreqScale> scale={freq_scale} label_format={Some(LabelFormat::FrequencyShort(true))} bounds={bounds.clone()} offset={offset} range={range_x} />
+                    <scale::Scale<GainScale> scale={gain_scale} label_format={Some(LabelFormat::GainShort(true))} bounds={bounds} offset={offset} range={range_y} />
                 </svg>
                 <canvas
                     id={self.props.id.clone()}
@@ -219,8 +203,7 @@ impl Component for ParametricEq {
                 </canvas>
                 {
                     if self.props.show_tooltip {
-                        let tooltip_text = self.tool_tip_content.clone();
-                        html!{<span ref=self.tooltip.clone() class="tooltip">{tooltip_text}</span>}
+                        html!{<span ref=self.tooltip.clone() class="tooltip">{tool_tip_content}</span>}
                     } else {
                         html!{}
                     }
@@ -231,30 +214,30 @@ impl Component for ParametricEq {
 
     fn rendered(&mut self, first_render: bool) {
         if let Some(canvas) = self.canvas.cast::<HtmlCanvasElement>() {
-            let rect = canvas.get_bounding_client_rect();
-            self.position = Some((rect.x(), rect.y()));
             self.renderer = CanvasEqRenderer::new(canvas, self.props.show_band_curves);
-        } else {
-            self.position = None;
-        };
-
+        }
         if first_render {
-            self.link.send_message(Msg::Refresh);
+            self.refresh();
         }
-
-        if !self.needs_repaint {
-            self.needs_repaint = true;
-            request_animation_frame(&self.render_callback);
-        }
+        self.render();
     }
 }
 
 impl ParametricEq {
+    fn request_refresh(&mut self) {
+        if !self.needs_refresh {
+            self.needs_refresh = true;
+            request_animation_frame(&self.refresh_callback);
+        }
+    }
+
+    fn refresh(&self) {
+        self.link.send_message(Msg::Refresh);
+    }
+
     fn render(&mut self) {
-        self.needs_repaint = false;
         if let Some(renderer) = &self.renderer {
             renderer.render_to_canvas(&self.props.eq);
-            self.update_tooltip();
         }
     }
 
@@ -303,12 +286,12 @@ impl ParametricEq {
 
         let touches = e.changed_touches();
 
-        if let (Some(touch), Some((canvas_x, canvas_y))) = (touches.get(0), self.position) {
+        if let Some(touch) = touches.get(0) {
             self.touch_interrupted = false;
             let x = touch.client_x() as f64;
             let y = touch.client_y() as f64;
             self.last_touch = Some((x, y));
-            self.handle_down(x - canvas_x, y - canvas_y);
+            self.handle_down(x - self.x(), y - self.y());
         }
     }
 
@@ -384,9 +367,9 @@ impl ParametricEq {
         let closest = self.find_closest_band(x, y);
         self.active_band = closest;
 
-        self.show_tooltip();
+        self.refresh();
 
-        self.link.send_message(Msg::Refresh);
+        self.show_tooltip();
     }
 
     fn handle_up(&mut self) {
@@ -429,15 +412,17 @@ impl ParametricEq {
     }
 
     fn x_converter(&self) -> impl ClampingConverter<X, Frequency> {
-        self.props.eq.x_to_frequency_converter(self.props.width)
+        self.props.eq.x_to_frequency_converter(self.width())
     }
 
     fn y_converter(&self) -> impl ClampingConverter<Y, Gain> {
-        self.props.eq.y_to_gain_converter(self.props.height, true)
+        self.props.eq.y_to_gain_converter(self.height(), true)
     }
 
     fn q_converter(&self) -> impl ClampingConverter<f64, Q> {
-        self.props.eq.q_to_radius_converter(self.props.width)
+        self.props
+            .eq
+            .q_to_radius_converter(self.width(), self.height())
     }
 
     fn find_closest_band(&self, x: f64, y: f64) -> Option<usize> {
@@ -471,14 +456,13 @@ impl ParametricEq {
         }
     }
 
-    fn show_tooltip(&self) {
+    fn show_tooltip(&mut self) {
         if !self.props.show_tooltip {
             return;
         }
 
         if let Some(tooltip) = self.tooltip.cast::<HtmlElement>() {
             set_style(&tooltip, "opacity", "1");
-            // set_style(&tooltip, "visibility", "visible");
         }
     }
 
@@ -489,22 +473,23 @@ impl ParametricEq {
 
         if let Some(tooltip) = self.tooltip.cast::<HtmlElement>() {
             set_style(&tooltip, "opacity", "0");
-            // set_style(&tooltip, "visibility", "hidden");
         }
     }
 
-    fn update_tooltip(&mut self) {
+    fn update_tooltip_content(&mut self) {
+        if !self.props.show_tooltip || self.active_band.is_none() {
+            return;
+        }
+        self.tool_tip_content = self.format_tooltip_text();
+    }
+
+    fn update_tooltip(&self) {
         if !self.props.show_tooltip || self.active_band.is_none() {
             return;
         }
 
-        if let (Some(index), Some(tooltip), Some((canvas_x, canvas_y))) = (
-            self.active_band,
-            self.tooltip.cast::<HtmlElement>(),
-            self.position,
-        ) {
-            self.tool_tip_content = self.format_tooltip_text();
-
+        if let (Some(index), Some(tooltip)) = (self.active_band, self.tooltip.cast::<HtmlElement>())
+        {
             let eq = &self.props.eq;
             let band = &eq.bands[index].0;
 
@@ -521,9 +506,9 @@ impl ParametricEq {
                 frequency,
                 gain,
                 q,
-                canvas_x,
-                canvas_y,
-                self.props.width,
+                self.x(),
+                self.y(),
+                self.width(),
                 x_conv,
                 y_conv,
                 q_conv,
@@ -532,12 +517,62 @@ impl ParametricEq {
     }
 
     fn apply_ext_props(&mut self) {
+        // TODO delay + refresh
         if let Some(props) = &self.ext_props {
             self.props = props.to_owned();
             self.ext_props = None;
-            self.link.send_message(Msg::Refresh);
         }
     }
+
+    fn x(&self) -> X {
+        self.renderer.as_ref().map(|r| r.bounds.x).unwrap_or(0.0)
+    }
+
+    fn y(&self) -> Y {
+        self.renderer.as_ref().map(|r| r.bounds.y).unwrap_or(0.0)
+    }
+
+    fn width(&self) -> X {
+        self.renderer
+            .as_ref()
+            .map(|r| r.bounds.width)
+            .unwrap_or(100.0)
+    }
+
+    fn height(&self) -> Y {
+        self.renderer
+            .as_ref()
+            .map(|r| r.bounds.height)
+            .unwrap_or(100.0)
+    }
+}
+
+fn scales(eq: &EqModel, width: f64, height: f64) -> (FreqScaleModel, GainScaleModel) {
+    let scale = eq.x_to_frequency_converter(width).1;
+    let layout = scale::Layout::Horizontal(scale::HorizontalPosition::Top);
+    let major_scale_markers = filter(&MAJOR_FREQUENCY_MARKERS, eq.min_frequency, eq.max_frequency);
+    let minor_scale_markers = filter(&MINOR_FREQUENCY_MARKERS, eq.min_frequency, eq.max_frequency);
+    let freq_scale = ScaleModel::new(
+        scale,
+        layout,
+        None,
+        major_scale_markers,
+        minor_scale_markers,
+    );
+
+    let scale = eq.y_to_gain_converter(height, true).1;
+    let layout = scale::Layout::Vertical(scale::VerticalPosition::Left);
+    let major_scale_markers = filter(&MAJOR_GAIN_MARKERS, eq.min_gain, eq.max_gain);
+    let minor_scale_markers = filter(&MINOR_GAIN_MARKERS, eq.min_gain, eq.max_gain);
+    let gain_scale = ScaleModel::new(
+        scale,
+        layout,
+        Some(0.0),
+        major_scale_markers,
+        minor_scale_markers,
+    );
+
+    (freq_scale, gain_scale)
 }
 
 fn format_band(band: &EqBand) -> Html {

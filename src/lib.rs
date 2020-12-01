@@ -1,5 +1,8 @@
 #![recursion_limit = "512"]
 
+use scales::prelude::LinearScale;
+use scales::prelude::LogarithmicScale;
+
 pub mod compressor;
 pub mod eq;
 pub mod expander;
@@ -30,6 +33,10 @@ pub type PeakValue = f64;
 pub type Update = (MeterValue, PeakValue);
 pub type ScaleValue = f64;
 pub type ShowUnit = bool;
+pub type FreqScale = LogarithmicScale<Frequency>;
+pub type GainScale = LinearScale<Gain>;
+pub type QScale = LogarithmicScale<Q>;
+pub type PixelScale = LinearScale<f64>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bounds {

@@ -89,35 +89,32 @@ impl EqModel {
         }
     }
 
-    pub fn x_to_frequency_converter(
-        &self,
-        width: f64,
-    ) -> (LinearScale<f64>, LogarithmicScale<f64>) {
-        let x_scale = LinearScale::new(0.0, width as f64);
-        let freq_scale = LogarithmicScale::new(self.min_frequency, self.max_frequency);
+    pub fn x_to_frequency_converter(&self, width: f64) -> (PixelScale, FreqScale) {
+        let x_scale = PixelScale::new(0.0, width as f64);
+        let freq_scale = FreqScale::new(self.min_frequency, self.max_frequency);
         (x_scale, freq_scale)
     }
 
-    pub fn y_to_gain_converter(
-        &self,
-        height: f64,
-        inverted: bool,
-    ) -> (LinearScale<f64>, LinearScale<f64>) {
+    pub fn y_to_gain_converter(&self, height: f64, inverted: bool) -> (PixelScale, GainScale) {
         let y_scale = if inverted {
-            LinearScale::inverted(0.0, height as f64)
+            PixelScale::inverted(0.0, height as f64)
         } else {
-            LinearScale::new(0.0, height as f64)
+            PixelScale::new(0.0, height as f64)
         };
-        let gain_scale = LinearScale::new(self.min_gain, self.max_gain);
+        let gain_scale = GainScale::new(self.min_gain, self.max_gain);
         (y_scale, gain_scale)
     }
 
     pub fn q_to_radius_converter(
         &self,
         width: f64,
-    ) -> (LogarithmicScale<f64>, LogarithmicScale<f64>) {
-        let q_scale = LogarithmicScale::new(self.min_q, self.max_q);
-        let radius_scale = LogarithmicScale::inverted(width / 60.0, width / 15.0);
+        height: f64,
+    ) -> (QScale, LogarithmicScale<f64>) {
+        let q_scale = QScale::new(self.min_q, self.max_q);
+        let radius_scale = LogarithmicScale::inverted(
+            (width / 60.0).min(height / 20.0),
+            (width / 15.0).min(height / 5.0),
+        );
         (q_scale, radius_scale)
     }
 }

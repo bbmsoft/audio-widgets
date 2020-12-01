@@ -9,7 +9,7 @@ pub struct CanvasEqRenderer {
     pub context: CanvasRenderingContext2d,
     pub band_curves: bool,
     pub style: Style,
-    pub geometry: Geometry,
+    pub bounds: Bounds,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -24,21 +24,12 @@ pub struct Style {
     sum_fill: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Geometry {
-    width: f64,
-    height: f64,
-}
-
 impl CanvasEqRenderer {
     pub fn new(canvas: HtmlCanvasElement, band_curves: bool) -> Option<CanvasEqRenderer> {
         let context = get_context_2d(&canvas)?;
         let style = get_styles(&canvas);
 
-        let width = canvas.width() as f64;
-        let height = canvas.height() as f64;
-
-        let geometry = Geometry { width, height };
+        let bounds = canvas.get_bounding_client_rect().into();
 
         let band_stroke = get_style("--band-stroke", &style, Some("#88f6"));
         let band_strokes = (0..10)
@@ -73,20 +64,20 @@ impl CanvasEqRenderer {
         Some(CanvasEqRenderer {
             context,
             band_curves,
-            geometry,
+            bounds,
             style,
         })
     }
 
     pub fn render_to_canvas(&self, eq: &EqModel) {
-        let width = self.geometry.width;
-        let height = self.geometry.height;
+        let width = self.bounds.width;
+        let height = self.bounds.height;
 
         let context = &self.context;
 
         let x_conv = eq.x_to_frequency_converter(width);
         let y_conv = eq.y_to_gain_converter(height, true);
-        let q_conv = eq.q_to_radius_converter(width);
+        let q_conv = eq.q_to_radius_converter(width, height);
 
         let graph = eq.plot(width, height, true);
 
