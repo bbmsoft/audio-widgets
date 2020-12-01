@@ -1,4 +1,5 @@
 use crate::*;
+use utils::*;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::*;
@@ -54,8 +55,7 @@ pub fn get_context_2d(canvas: &HtmlCanvasElement) -> Option<CanvasRenderingConte
 }
 
 pub fn set_style(element: &HtmlElement, key: &str, value: &str) {
-    // TODO handle errors
-    element.style().set_property(key, value).unwrap();
+    element.style().set_property(key, value).ignore();
 }
 
 pub fn register_global_listener(event_type: &str, listener: &Closure<dyn Fn(MouseEvent) -> ()>) {

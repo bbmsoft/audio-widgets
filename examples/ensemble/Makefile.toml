@@ -1,0 +1,8 @@
+[tasks.wasm-dev]
+command = "wasm-pack"
+args = ["build", "--target", "web", "--dev"]
+watch = true
+
+[tasks.wasm]
+command = "wasm-pack"
+args = ["build", "--target", "web", "--release"]

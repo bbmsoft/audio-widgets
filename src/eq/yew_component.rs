@@ -44,7 +44,6 @@ pub struct Props {
     pub eq: EqModel,
     #[derivative(PartialEq = "ignore")]
     pub on_input: Callback<(usize, Parameter)>,
-    pub show_minor_grid: bool,
     pub show_band_curves: bool,
     pub show_tooltip: bool,
 }
@@ -663,13 +662,16 @@ fn position_tooltip(
 
     let left = canvas_x
         + (x + x_offset)
-            .max(padding)
-            .min(width - tooltip_width - padding);
-    let top = if y >= tooltip_height + 2.0 * padding {
-        canvas_y + (y + y_offset).max(padding)
-    } else {
-        canvas_y + y + offset + padding
-    };
+            // .max(padding)
+            // .min(width - tooltip_width - padding)
+            ;
+    let top = 
+    // if y >= tooltip_height + 2.0 * padding {
+        canvas_y + (y + y_offset) //.max(padding)
+    // } else {
+        // canvas_y + y + offset + padding
+    // }
+    ;
 
     tooltip
         .style()
