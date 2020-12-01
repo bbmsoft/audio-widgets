@@ -51,3 +51,21 @@ pub struct ScaleGraph {
     pub default_value: Option<Line>,
     pub labels: Vec<Label>,
 }
+
+impl<S: Scale<f64>> scales::Scale<f64> for ScaleModel<S> {
+    fn to_relative(&self, absolute: f64) -> f64 {
+        self.scale.to_relative(absolute)
+    }
+
+    fn to_absolute(&self, relative: f64) -> f64 {
+        self.scale.to_absolute(relative)
+    }
+
+    fn max(&self) -> f64 {
+        self.scale.max()
+    }
+
+    fn min(&self) -> f64 {
+        self.scale.min()
+    }
+}

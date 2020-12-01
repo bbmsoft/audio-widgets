@@ -12,9 +12,9 @@ use web_sys::*;
 use yew::prelude::*;
 
 #[derive(Debug)]
-pub struct Fader {
-    props: Props,
-    ext_props: Option<Props>,
+pub struct Fader<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> {
+    props: Props<FaderScale>,
+    ext_props: Option<Props<FaderScale>>,
     link: ComponentLink<Self>,
     root: NodeRef,
     knob: NodeRef,
@@ -24,19 +24,18 @@ pub struct Fader {
     layout_callback: Closure<dyn FnMut()>,
     needs_layout: bool,
     background: NodeRef,
-    pub scale_label_format: Option<LabelFormat>,
+    scale_label_format: Option<LabelFormat>,
 }
 
 #[derive(Derivative, Properties)]
 #[derivative(Debug, Clone, PartialEq)]
-pub struct Props {
+pub struct Props<FaderScale: Scale<f64> + Clone + PartialEq> {
     pub id: String,
-    pub fader: FaderModel,
+    pub fader: FaderModel<FaderScale>,
     #[derivative(PartialEq = "ignore")]
     pub on_input: Callback<FaderValue>,
     pub show_tooltip: bool,
     pub label: String,
-    pub scale: ScaleModel<BrokenScale<f64>>,
     pub draw_scale_labels: bool,
 }
 
@@ -52,7 +51,7 @@ pub enum Msg {
     Refresh,
 }
 
-impl Fader {
+impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq> Fader<FaderScale> {
     fn format_tooltip_text(&self) -> Html {
         let gain = self.props.fader.value;
         let label = &self.props.label;
@@ -70,7 +69,9 @@ impl Fader {
         if let Some(elements) = &self.elements {
             let knob = &elements.knob;
             let value = self.props.fader.value;
-            let y = elements.converter.convert_back(value);
+            let pixel_scale = &elements.pixel_scale;
+            let conv = (pixel_scale, &self.props.fader.scale);
+            let y = conv.convert_back(value);
             set_style(&knob, "top", &format!("{}px", y));
             self.update_tooltip();
         }
@@ -97,7 +98,8 @@ impl Fader {
         if let Some(elements) = &self.elements {
             let fader = &self.props.fader;
             let g = fader.value;
-            let conv = &elements.converter;
+            let pixel_scale = &elements.pixel_scale;
+            let conv = (pixel_scale, &self.props.fader.scale);
             let dampening = 2.0;
             let delta = e.delta_y().signum() * dampening;
             let new_g = conv.add_external_clamped(delta, g);
@@ -136,7 +138,8 @@ impl Fader {
     fn handle_move(&self, d_y: Y) {
         if self.touched {
             if let Some(elements) = &self.elements {
-                let y_conv = &elements.converter;
+                let pixel_scale = &elements.pixel_scale;
+                let y_conv = (pixel_scale, &self.props.fader.scale);
                 let gain = self.props.fader.value;
                 let new_g = y_conv.add_external_clamped(d_y, gain);
                 if new_g != gain {
@@ -188,12 +191,11 @@ impl Fader {
             (&self.tooltip.cast::<HtmlElement>(), &self.elements)
         {
             let fader = &self.props.fader;
-
             let gain = fader.value;
+            let pixel_scale = &elements.pixel_scale;
+            let conv = (pixel_scale, &self.props.fader.scale);
 
-            let conv = &elements.converter;
-
-            position_tooltip(&tooltip, gain, conv);
+            position_tooltip(&tooltip, gain, &conv);
         }
     }
 
@@ -234,10 +236,10 @@ impl Fader {
     }
 }
 
-impl Component for Fader {
+impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for Fader<FaderScale> {
     type Message = Msg;
 
-    type Properties = Props;
+    type Properties = Props<FaderScale>;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let cb_link = link.clone();
@@ -294,7 +296,7 @@ impl Component for Fader {
                 return true;
             }
             Msg::InternalUpdate(new_value) => {
-                self.props.fader = self.props.fader.update(new_value);
+                self.props.fader.update(new_value);
                 return true;
             }
         }
@@ -317,7 +319,7 @@ impl Component for Fader {
         let wheel_callback = self.link.callback(|e| Msg::Wheel(e));
         let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
 
-        let scale = self.props.scale.clone();
+        let scale = self.props.fader.scale.clone();
         let label_format = self.scale_label_format.clone();
 
         let background = self.background.clone();
@@ -338,7 +340,7 @@ impl Component for Fader {
                 <div class="fader-background" ref={background}>
                     <span class="track"></span>
                     <svg class="scale" width={background_bounds.as_ref().map(|b|b.width).unwrap_or(0.0)} height={background_bounds.as_ref().map(|b|b.height).unwrap_or(0.0)}>
-                        <scale::Scale<BrokenScale<f64>> scale={scale} label_format={label_format} bounds={background_bounds} offset={offset} range={range} />
+                        <scale::Scale<FaderScale> scale={scale} label_format={label_format} bounds={background_bounds} offset={offset} range={range} />
                     </svg>
                 </div>
                 <span class="knob" ref=self.knob.clone()></span>
@@ -378,19 +380,17 @@ impl Component for Fader {
                     height: knob_rect.height(),
                 };
 
-                let converter = self.props.fader.y_to_gain_converter(
-                    bounds.y,
-                    bounds.height,
-                    knob_bounds.height,
-                    true,
-                );
+                let pixel_scale =
+                    self.props
+                        .fader
+                        .pixel_scale(bounds.y, bounds.height, knob_bounds.height, true);
 
                 self.elements = Some(Elements {
                     knob,
                     tooltip,
                     bounds,
                     knob_bounds,
-                    converter,
+                    pixel_scale,
                 });
             } else {
                 self.elements = None;

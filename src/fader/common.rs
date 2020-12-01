@@ -1,58 +1,43 @@
+use crate::scale::ScaleModel;
 use crate::*;
 use scales::prelude::*;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FaderModel {
+pub struct FaderModel<S: Scale<f64>> {
     pub min: FaderValue,
     pub max: FaderValue,
     pub value: FaderValue,
-    pub scale: BrokenScale<f64>,
+    pub default_value: FaderValue,
+    pub scale: ScaleModel<S>,
 }
 
-impl FaderModel {
-    pub fn new(min: FaderValue, max: FaderValue, broken_scale: &[(f64, f64)]) -> FaderModel {
+impl<S: Scale<f64>> FaderModel<S> {
+    pub fn new(scale: ScaleModel<S>, default_value: FaderValue) -> FaderModel<S> {
         FaderModel {
-            min,
-            max,
-            value: min,
-            scale: BrokenScale::new(min, max, broken_scale),
+            min: scale.min(),
+            max: scale.max(),
+            value: default_value,
+            default_value,
+            scale,
         }
     }
 
-    pub fn update(&self, value: FaderValue) -> FaderModel {
-        FaderModel {
-            min: self.min,
-            max: self.max,
-            value,
-            scale: self.scale.clone(),
-        }
+    pub fn update(&mut self, value: FaderValue) {
+        self.value = value;
     }
 
-    pub fn y_to_gain_converter(
+    pub fn pixel_scale(
         &self,
         y_offset: f64,
         height: f64,
         knob_height: f64,
         inverted: bool,
-    ) -> (LinearScale<f64>, BrokenScale<f64>) {
-        let y_scale = if inverted {
-            LinearScale::inverted(y_offset, y_offset + height - knob_height)
+    ) -> PixelScale {
+        if inverted {
+            PixelScale::inverted(y_offset, y_offset + height - knob_height)
         } else {
-            LinearScale::new(y_offset, y_offset + height - knob_height)
-        };
-        let gain_scale = self.scale.clone();
-        (y_scale, gain_scale)
-    }
-}
-
-impl Default for FaderModel {
-    fn default() -> Self {
-        FaderModel {
-            min: -120.0,
-            max: 12.0,
-            value: -120.0,
-            scale: BrokenScale::new(-120.0, 12.0, &vec![]),
+            PixelScale::new(y_offset, y_offset + height - knob_height)
         }
     }
 }
