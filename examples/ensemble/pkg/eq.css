@@ -1,0 +1,120 @@
+/* layout */
+
+.eq,
+.graphic-eq {
+  padding: 0;
+  margin: 0;
+  overflow-y: hidden;
+  touch-action: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+.eq > canvas,
+.eq > .scale,
+.graphic-eq > .faders {
+  grid-row: 1;
+  grid-column: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.eq > canvas {
+  cursor: grab;
+}
+
+.eq:active > canvas {
+  cursor: grabbing;
+}
+
+.graphic-eq > .faders > .fader {
+  width: 4em;
+  height: 18em;
+  padding: 0.3em;
+}
+
+.graphic-eq > .faders > .fader:last-of-type {
+  width: 6em;
+}
+
+.graphic-eq > .faders > .fader:last-of-type > .fader-background > .track,
+.graphic-eq > .faders > .fader:last-of-type > .knob,
+.graphic-eq > .faders > .fader:last-of-type > .tooltip {
+  transform: translateX(-1em);
+}
+
+.graphic-eq > .faders > .fader > .fader-background > .scale > .scale-label {
+  visibility: hidden;
+}
+
+.graphic-eq
+  > .faders
+  > .fader:last-of-type
+  > .fader-background
+  > .scale
+  > .scale-label {
+  visibility: visible;
+}
+
+.graphic-eq > .faders .fader > .fader-background > .scale > line {
+  transform: translateY(0.5px);
+}
+
+.graphic-eq
+  > .faders
+  > .fader:last-of-type
+  > .fader-background
+  > .scale
+  > line {
+  transform: translateY(0.5px) scaleX(0.667);
+}
+
+/* style */
+
+.eq {
+  width: 100%;
+  height: 50%;
+  background-color: var(--slate);
+  --band-stroke: var(--orange-prim);
+  --band-disabled-stroke: var(--light-gray);
+  --band-fill: var(--orange-prim-trans);
+  --band-disabled-fill: var(--light-gray-trans);
+  --sum-stroke: var(--orange-prim);
+  --sum-fill: var(--orange-prim-trans);
+  --major-grid-stroke: var(--light-gray);
+  --minor-grid-stroke: var(--medium-gray);
+}
+
+.eq > .scale > .scale-label {
+  transform: translate(0.2em, 1.1em);
+}
+
+.minion-eqs {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 3em;
+}
+
+.minion-eqs > .eq {
+  pointer-events: none;
+  height: 4em;
+  margin-right: 1em;
+}
+
+.minion-eqs > .eq:last-of-type {
+  margin-right: 0;
+}
+
+.minion-eqs .eq > .scale > .scale-label {
+  visibility: hidden;
+}
+
+.minion-eqs .eq > .scale > .minor-scale {
+  visibility: hidden;
+}

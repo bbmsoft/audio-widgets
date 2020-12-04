@@ -1,0 +1,20 @@
+.scale {
+  pointer-events: none;
+  user-select: none;
+}
+
+.scale > line {
+  transform: translate(0.5px, 0.5px);
+}
+
+.scale > .major-scale {
+  stroke: var(--light-gray);
+}
+
+.scale > .minor-scale {
+  stroke: var(--medium-gray);
+}
+
+.scale > .scale-label {
+  fill: var(--light-gray);
+}
