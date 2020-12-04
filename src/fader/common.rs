@@ -8,17 +8,15 @@ pub struct FaderModel<S: Scale<f64>> {
     pub min: FaderValue,
     pub max: FaderValue,
     pub value: FaderValue,
-    pub default_value: FaderValue,
     pub scale: ScaleModel<S>,
 }
 
 impl<S: Scale<f64>> FaderModel<S> {
-    pub fn new(scale: ScaleModel<S>, default_value: FaderValue) -> FaderModel<S> {
+    pub fn new(scale: ScaleModel<S>) -> FaderModel<S> {
         FaderModel {
             min: scale.min(),
             max: scale.max(),
-            value: default_value,
-            default_value,
+            value: scale.default_value.unwrap_or(scale.min()),
             scale,
         }
     }

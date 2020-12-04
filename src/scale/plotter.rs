@@ -76,12 +76,14 @@ fn line(
             y_start: 0.0,
             x_end: v,
             y_end: length,
+            value: marker,
         },
         Layout::Vertical(_) => Line {
             x_start: 0.0,
             y_start: v,
             x_end: length,
             y_end: v,
+            value: marker,
         },
     }
 }

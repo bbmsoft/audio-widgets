@@ -52,6 +52,7 @@ pub struct Line {
     y_start: Y,
     x_end: X,
     y_end: Y,
+    value: f64,
 }
 
 #[derive(Debug, Clone, PartialEq)]

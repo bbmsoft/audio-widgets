@@ -2,6 +2,16 @@ use crate::eq::plotter;
 use crate::*;
 use scales::prelude::*;
 
+pub const MAJOR_GAIN_MARKERS: [f64; 7] = [-18.0, -12.0, -6.0, 0.0, 6.0, 12.0, 18.0];
+pub const MINOR_GAIN_MARKERS: [f64; 8] = [-21.0, -15.0, -9.0, -3.0, 3.0, 9.0, 15.0, 21.0];
+
+pub const MAJOR_FREQUENCY_MARKERS: [f64; 4] = [10.0, 100.0, 1_000.0, 10_000.0];
+pub const MINOR_FREQUENCY_MARKERS: [f64; 41] = [
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0,
+    200.0, 300.0, 400.0, 500.0, 600.0, 700.0, 800.0, 900.0, 2000.0, 3000.0, 4000.0, 5000.0, 6000.0,
+    7000.0, 8000.0, 9000.0, 20000.0, 30000.0, 40000.0, 50000.0, 60000.0, 70000.0, 80000.0, 90000.0,
+];
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct EqModel {
     pub bands: Vec<(EqBand, Active)>,
@@ -117,6 +127,28 @@ impl EqModel {
         );
         (q_scale, radius_scale)
     }
+
+    pub fn gain_markers(&self, incl: bool) -> (Vec<Gain>, Vec<Gain>) {
+        let major = filter(&MAJOR_GAIN_MARKERS, self.min_gain, self.max_gain, incl);
+        let minor = filter(&MINOR_GAIN_MARKERS, self.min_gain, self.max_gain, incl);
+        (major, minor)
+    }
+
+    pub fn frequency_markers(&self, incl: bool) -> (Vec<Gain>, Vec<Gain>) {
+        let major = filter(
+            &MAJOR_FREQUENCY_MARKERS,
+            self.min_frequency,
+            self.max_frequency,
+            incl,
+        );
+        let minor = filter(
+            &MINOR_FREQUENCY_MARKERS,
+            self.min_frequency,
+            self.max_frequency,
+            incl,
+        );
+        (major, minor)
+    }
 }
 
 impl Default for EqModel {
@@ -170,6 +202,34 @@ impl Default for EqModel {
             min_q,
             max_q,
             active,
+        }
+    }
+}
+
+impl EqModel {
+    pub fn graphic(num: usize) -> EqModel {
+        let bands = (0..num)
+            .map(|_| {
+                (
+                    EqBand::Bell {
+                        frequency: 1_000.0,
+                        gain: 0.0,
+                        q: 1.0,
+                    },
+                    true,
+                )
+            })
+            .collect();
+
+        EqModel {
+            active: true,
+            bands,
+            max_frequency: 24_000.0,
+            min_frequency: 20.0,
+            max_gain: 12.0,
+            min_gain: -12.0,
+            max_q: 100.0,
+            min_q: 0.1,
         }
     }
 }
@@ -293,5 +353,22 @@ fn update_band(band: (EqBand, bool), change: Parameter) -> Option<(EqBand, bool)
         }
         ((band, _), Parameter::Active(active)) => Some((band, active)),
         _ => None,
+    }
+}
+
+fn filter<'a>(markers: &[f64], min: f64, max: f64, incl: bool) -> Vec<f64> {
+    let iter = markers.iter();
+    if incl {
+        iter.filter_map(|m| {
+            if &min <= m && m <= &max {
+                Some(*m)
+            } else {
+                None
+            }
+        })
+        .collect()
+    } else {
+        iter.filter_map(|m| if &min < m && m < &max { Some(*m) } else { None })
+            .collect()
     }
 }

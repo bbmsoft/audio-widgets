@@ -10,6 +10,11 @@ mod js;
 pub use crate::eq::js::*;
 
 #[cfg(feature = "yew-components")]
-mod yew_component;
+pub mod yew_component_param;
 #[cfg(feature = "yew-components")]
-pub use crate::eq::yew_component::*;
+pub use crate::eq::yew_component_param::*;
+
+#[cfg(feature = "yew-components")]
+pub mod yew_component_graphic;
+#[cfg(feature = "yew-components")]
+pub use crate::eq::yew_component_graphic::*;

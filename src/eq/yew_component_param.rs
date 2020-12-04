@@ -12,19 +12,9 @@ use yew::prelude::*;
 pub type FreqScaleModel = ScaleModel<FreqScale>;
 pub type GainScaleModel = ScaleModel<GainScale>;
 
-const MAJOR_GAIN_MARKERS: [f64; 7] = [-18.0, -12.0, -6.0, 0.0, 6.0, 12.0, 18.0];
-const MINOR_GAIN_MARKERS: [f64; 8] = [-21.0, -15.0, -9.0, -3.0, 3.0, 9.0, 15.0, 21.0];
-
-const MAJOR_FREQUENCY_MARKERS: [f64; 4] = [10.0, 100.0, 1_000.0, 10_000.0];
-const MINOR_FREQUENCY_MARKERS: [f64; 41] = [
-    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0,
-    200.0, 300.0, 400.0, 500.0, 600.0, 700.0, 800.0, 900.0, 2000.0, 3000.0, 4000.0, 5000.0, 6000.0,
-    7000.0, 8000.0, 9000.0, 20000.0, 30000.0, 40000.0, 50000.0, 60000.0, 70000.0, 80000.0, 90000.0,
-];
-
 pub struct ParametricEq {
-    props: Props,
-    ext_props: Option<Props>,
+    props: ParamProps,
+    ext_props: Option<ParamProps>,
     link: ComponentLink<Self>,
     canvas: NodeRef,
     tooltip: NodeRef,
@@ -39,13 +29,39 @@ pub struct ParametricEq {
 }
 #[derive(Derivative, Properties)]
 #[derivative(Debug, Clone, PartialEq)]
-pub struct Props {
-    pub id: String,
+pub struct ParamProps {
+    pub id: Option<String>,
     pub eq: EqModel,
     #[derivative(PartialEq = "ignore")]
-    pub on_input: Callback<(usize, Parameter)>,
+    pub on_input: Option<Callback<(usize, Parameter)>>,
     pub show_band_curves: bool,
     pub show_tooltip: bool,
+}
+
+impl ParamProps {
+    pub fn minimal(eq: EqModel) -> ParamProps {
+        ParamProps {
+            id: None,
+            eq,
+            on_input: None,
+            show_band_curves: false,
+            show_tooltip: false,
+        }
+    }
+
+    pub fn regular<S: AsRef<str>>(
+        id: S,
+        eq: EqModel,
+        on_input: Callback<(usize, Parameter)>,
+    ) -> ParamProps {
+        ParamProps {
+            id: Some(id.as_ref().to_owned()),
+            eq,
+            on_input: Some(on_input),
+            show_band_curves: true,
+            show_tooltip: true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,7 +82,7 @@ pub enum Msg {
 
 impl Component for ParametricEq {
     type Message = Msg;
-    type Properties = Props;
+    type Properties = ParamProps;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let canvas = NodeRef::default();
@@ -149,6 +165,8 @@ impl Component for ParametricEq {
     }
 
     fn view(&self) -> Html {
+        let id = self.props.id.as_deref().unwrap_or("");
+
         let mouse_down_callback = self.link.callback(|e| Msg::MouseDown(e));
 
         let touch_start_callback = self.link.callback(|e| Msg::TouchStart(e));
@@ -186,7 +204,7 @@ impl Component for ParametricEq {
                     <scale::Scale<GainScale> scale={gain_scale} label_format={Some(LabelFormat::GainShort(true))} bounds={bounds} offset={offset} range={range_y} />
                 </svg>
                 <canvas
-                    id={self.props.id.clone()}
+                    id={id}
                     onmousedown={mouse_down_callback}
                     ontouchstart={touch_start_callback}
                     ontouchend={touch_end_callback}
@@ -405,7 +423,7 @@ impl ParametricEq {
     }
 
     fn update_backend(&self, band: usize, parameter: Parameter) {
-        if let Callback::Callback(fun) = &self.props.on_input {
+        if let Some(Callback::Callback(fun)) = &self.props.on_input {
             fun((band, parameter));
         }
     }
@@ -507,7 +525,6 @@ impl ParametricEq {
                 q,
                 self.x(),
                 self.y(),
-                self.width(),
                 x_conv,
                 y_conv,
                 q_conv,
@@ -549,8 +566,7 @@ impl ParametricEq {
 fn scales(eq: &EqModel, width: f64, height: f64) -> (FreqScaleModel, GainScaleModel) {
     let scale = eq.x_to_frequency_converter(width).1;
     let layout = scale::Layout::Horizontal(scale::HorizontalPosition::Top);
-    let major_scale_markers = filter(&MAJOR_FREQUENCY_MARKERS, eq.min_frequency, eq.max_frequency);
-    let minor_scale_markers = filter(&MINOR_FREQUENCY_MARKERS, eq.min_frequency, eq.max_frequency);
+    let (major_scale_markers, minor_scale_markers) = eq.frequency_markers(false);
     let freq_scale = ScaleModel::new(
         scale,
         layout,
@@ -561,8 +577,7 @@ fn scales(eq: &EqModel, width: f64, height: f64) -> (FreqScaleModel, GainScaleMo
 
     let scale = eq.y_to_gain_converter(height, true).1;
     let layout = scale::Layout::Vertical(scale::VerticalPosition::Left);
-    let major_scale_markers = filter(&MAJOR_GAIN_MARKERS, eq.min_gain, eq.max_gain);
-    let minor_scale_markers = filter(&MINOR_GAIN_MARKERS, eq.min_gain, eq.max_gain);
+    let (major_scale_markers, minor_scale_markers) = eq.gain_markers(false);
     let gain_scale = ScaleModel::new(
         scale,
         layout,
@@ -642,7 +657,6 @@ fn position_tooltip(
     q: f64,
     canvas_x: f64,
     canvas_y: f64,
-    width: f64,
     x_conv: impl Converter<X, Frequency>,
     y_conv: impl Converter<Y, Gain>,
     q_conv: impl Converter<Q, Radius>,
@@ -660,18 +674,9 @@ fn position_tooltip(
     let x_offset = -tooltip_width * 0.5;
     let y_offset = -tooltip_height - offset - padding;
 
-    let left = canvas_x
-        + (x + x_offset)
-            // .max(padding)
-            // .min(width - tooltip_width - padding)
-            ;
-    let top = 
-    // if y >= tooltip_height + 2.0 * padding {
-        canvas_y + (y + y_offset) //.max(padding)
-    // } else {
-        // canvas_y + y + offset + padding
-    // }
-    ;
+    // TODO make sure tooltip does not move out of the viewport
+    let left = canvas_x + (x + x_offset);
+    let top = canvas_y + (y + y_offset);
 
     tooltip
         .style()
@@ -681,11 +686,4 @@ fn position_tooltip(
         .style()
         .set_property("top", &format!("{}px", top))
         .unwrap();
-}
-
-fn filter<'a>(markers: &[f64], min: f64, max: f64) -> Vec<f64> {
-    markers
-        .iter()
-        .filter_map(|m| if &min < m && m < &max { Some(*m) } else { None })
-        .collect()
 }

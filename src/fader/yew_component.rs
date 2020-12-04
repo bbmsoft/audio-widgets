@@ -1,7 +1,6 @@
 use crate::fader::common::*;
 use crate::fader::js::*;
 use crate::js_utils::*;
-use crate::scale::ScaleModel;
 use crate::utils::*;
 use crate::*;
 use derivative::*;
@@ -30,13 +29,38 @@ pub struct Fader<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> {
 #[derive(Derivative, Properties)]
 #[derivative(Debug, Clone, PartialEq)]
 pub struct Props<FaderScale: Scale<f64> + Clone + PartialEq> {
-    pub id: String,
+    pub id: Option<String>,
     pub fader: FaderModel<FaderScale>,
     #[derivative(PartialEq = "ignore")]
     pub on_input: Callback<FaderValue>,
     pub show_tooltip: bool,
     pub label: String,
-    pub draw_scale_labels: bool,
+}
+
+impl<FaderScale: Scale<f64> + Clone + PartialEq> Props<FaderScale> {
+    pub fn regular(fader: FaderModel<FaderScale>, on_input: Callback<FaderValue>) -> Self {
+        Props {
+            id: None,
+            fader,
+            on_input,
+            show_tooltip: true,
+            label: "Gain".to_owned(),
+        }
+    }
+
+    pub fn regular_with_label(
+        fader: FaderModel<FaderScale>,
+        on_input: Callback<FaderValue>,
+        label: String,
+    ) -> Self {
+        Props {
+            id: None,
+            fader,
+            on_input,
+            show_tooltip: true,
+            label,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -313,7 +337,7 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
     }
 
     fn view(&self) -> Html {
-        let id = self.props.id.clone();
+        let id = self.props.id.as_deref().unwrap_or("");
 
         let mouse_down_callback = self.link.callback(|e| Msg::MouseDown(e));
         let wheel_callback = self.link.callback(|e| Msg::Wheel(e));

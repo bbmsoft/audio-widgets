@@ -70,14 +70,19 @@ impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Comp
             self.props.label_format.as_ref(),
         );
 
-        let major_lines = svg_lines(graph.major_lines.iter().map(|l| (l, "major-scale")));
+        let major_lines = svg_lines(graph.major_lines.iter().map(|l| {
+            let is_default = self
+                .props
+                .scale
+                .default_value
+                .map_or(false, |v| v == l.value);
+            if is_default {
+                (l, "major-scale default-value")
+            } else {
+                (l, "major-scale")
+            }
+        }));
         let minor_lines = svg_lines(graph.minor_lines.iter().map(|l| (l, "minor-scale")));
-
-        let default_value = graph
-            .default_value
-            .as_ref()
-            .map(|l| svg_line(l, "default-value"))
-            .unwrap_or_else(|| html! {});
 
         let labels = svg_labels(graph.labels.iter().map(|l| {
             let is_default = self
@@ -97,7 +102,6 @@ impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Comp
             <>
                 {major_lines}
                 {minor_lines}
-                {default_value}
                 {labels}
             </>
         }
