@@ -36,7 +36,7 @@ impl Component for Ensemble {
         html! {
             <>
                 <NavBar nav={self.link.callback(|nav| Msg::Navigation(nav))} />
-                {self.route()}
+                <div class="view-container">{self.route()}</div>
             </>
         }
     }

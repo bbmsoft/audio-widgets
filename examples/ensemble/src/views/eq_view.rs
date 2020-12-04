@@ -29,18 +29,26 @@ impl Component for EqView {
 
     fn view(&self) -> Html {
         let eq = &self.eq;
+
+        let props = ParamProps::regular("eq", eq.clone(), self.link.callback(|e| e));
+
+        let num_minions = 6;
+        let minions: Vec<Html> = (0..num_minions)
+            .map(|_| {
+                let props = ParamProps::minimal(eq.clone());
+                html! {<ParametricEq with props />}
+            })
+            .collect();
+
         html! {
             <div class="view eq-view">
-                <ParametricEq id={"eq"} eq={eq.clone()} on_input={self.link.callback(|e| e)} show_band_curves={true} show_tooltip={true} />
-                <div class="caption">{"A parametric EQ widget that accepts user input."}</div>
+                <ParametricEq with props />
+                <div class="caption">
+                {"A parametric EQ widget that accepts user input. Drag a band to adjust frequency and gain, scroll or pinch to adjust Q, right click or long-touch to disable/enable bands and double click/tap to set gain to 0 dB."}
+                </div>
 
                 <div class="minion-eqs">
-                    <ParametricEq id={"eq-min-1"} eq={eq.clone()} on_input={self.link.callback(|e| e)} show_band_curves={false} show_tooltip={false} />
-                    <ParametricEq id={"eq-min-2"} eq={eq.clone()} on_input={self.link.callback(|e| e)} show_band_curves={false} show_tooltip={false} />
-                    <ParametricEq id={"eq-min-3"} eq={eq.clone()} on_input={self.link.callback(|e| e)} show_band_curves={false} show_tooltip={false} />
-                    <ParametricEq id={"eq-min-4"} eq={eq.clone()} on_input={self.link.callback(|e| e)} show_band_curves={false} show_tooltip={false} />
-                    <ParametricEq id={"eq-min-5"} eq={eq.clone()} on_input={self.link.callback(|e| e)} show_band_curves={false} show_tooltip={false} />
-                    <ParametricEq id={"eq-min-6"} eq={eq.clone()} on_input={self.link.callback(|e| e)} show_band_curves={false} show_tooltip={false} />
+                    {minions}
                 </div>
                 <div class="caption">{"A bunch of smaller EQ graphs. They do not accept user input, but visualize the current EQ curve."}</div>
             </div>

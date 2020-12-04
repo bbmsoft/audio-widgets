@@ -1,14 +1,23 @@
+use audio_widgets::eq::*;
 use yew::*;
 
-pub struct FaderView {}
+pub struct FaderView {
+    link: ComponentLink<Self>,
+    eq: EqModel,
+}
+
+pub enum Msg {
+    EqUpdate((usize, Parameter)),
+}
 
 impl Component for FaderView {
-    type Message = ();
+    type Message = Msg;
 
     type Properties = ();
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        FaderView {}
+        let eq = EqModel::graphic(10);
+        FaderView { link, eq }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -20,9 +29,12 @@ impl Component for FaderView {
     }
 
     fn view(&self) -> Html {
+        let eq = self.eq.clone();
+        let on_input = Some(self.link.callback(|p| Msg::EqUpdate(p)));
+        let props = GraphicProps::regular(eq, on_input);
         html! {
             <div class="view fader-view">
-                <h1>{"Coming soon..."}</h1>
+                <GraphicEq with props />
             </div>
         }
     }
