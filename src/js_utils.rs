@@ -72,6 +72,19 @@ fn document() -> web_sys::Document {
     window().document().expect("no global `document` exists")
 }
 
+pub fn get_absolute_bounding_rect(elem: &Element) -> Bounds {
+    let scroll_x = window().scroll_x().expect("could not get global scroll");
+    let scroll_y = window().scroll_y().expect("could not get global scroll");
+    let client_rect = elem.get_bounding_client_rect();
+
+    Bounds {
+        x: scroll_x + client_rect.x(),
+        y: scroll_y + client_rect.y(),
+        width: client_rect.width(),
+        height: client_rect.height(),
+    }
+}
+
 impl<DR: AsRef<DomRect>> From<DR> for Bounds {
     fn from(dr: DR) -> Self {
         let dr = dr.as_ref();

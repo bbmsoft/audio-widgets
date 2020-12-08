@@ -190,9 +190,8 @@ impl Component for ParametricEq {
 
         let (freq_scale, gain_scale) = scales(eq, width, height);
 
-        let offset = None;
-        let range_x = None;
-        let range_y = None;
+        let pixel_scale_x = LinearScale::new(0.0, width);
+        let pixel_scale_y = LinearScale::inverted(0.0, height);
 
         let tool_tip_content = self.tool_tip_content.clone();
         self.update_tooltip();
@@ -200,8 +199,8 @@ impl Component for ParametricEq {
         html! {
             <div class="eq" ref={self.container.clone()}>
                 <svg class="scale" width={width} height={height}>
-                    <scale::Scale<FreqScale> scale={freq_scale} label_format={Some(LabelFormat::FrequencyShort(true))} bounds={bounds.clone()} offset={offset} range={range_x} />
-                    <scale::Scale<GainScale> scale={gain_scale} label_format={Some(LabelFormat::GainShort(true))} bounds={bounds} offset={offset} range={range_y} />
+                    <scale::Scale<FreqScale> scale={freq_scale} pixel_scale={pixel_scale_x} label_format={Some(LabelFormat::FrequencyShort(true))} width={height} />
+                    <scale::Scale<GainScale> scale={gain_scale} pixel_scale={pixel_scale_y} label_format={Some(LabelFormat::GainShort(true))} width={width} />
                 </svg>
                 <canvas
                     id={id}

@@ -5,15 +5,12 @@ use scales::prelude::LinearScale;
 
 pub fn plot_scale<S: scales::Scale<f64>>(
     scale: &ScaleModel<S>,
-    offset: f64,
-    range: f64,
+    pixel_scale: &LinearScale<f64>,
     length: f64,
     invert_y: bool,
     label_format: Option<&LabelFormat>,
 ) -> ScaleGraph {
-    let pixel_scale = pixel_scale_for_layout(&scale.layout, offset, range, invert_y);
-
-    let converter = (&scale.scale, &pixel_scale);
+    let converter = (&scale.scale, pixel_scale);
 
     let major_lines = lines(
         &scale.major_scale_markers,

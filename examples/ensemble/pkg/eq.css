@@ -33,7 +33,7 @@
 .graphic-eq > .faders > .fader {
   width: 4em;
   height: 18em;
-  padding: 0.3em;
+  padding: 0 0.3em;
 }
 
 .graphic-eq > .faders > .fader:last-of-type {

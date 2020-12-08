@@ -12,9 +12,8 @@ pub struct Scale<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug> {
 #[derive(Debug, Clone, PartialEq, Properties)]
 pub struct Props<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug> {
     pub scale: ScaleModel<S>,
-    pub bounds: Option<Bounds>,
-    pub offset: Option<Y>,
-    pub range: Option<Y>,
+    pub pixel_scale: LinearScale<f64>,
+    pub width: f64,
     pub label_format: Option<LabelFormat>,
 }
 
@@ -41,31 +40,12 @@ impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Comp
     }
 
     fn view(&self) -> Html {
-        let bounds = match self.props.bounds.as_ref() {
-            Some(bounds) => bounds,
-            None => return html! {},
-        };
-
-        let offset = self.props.offset.unwrap_or(0.0);
-
-        let range = self
-            .props
-            .range
-            .unwrap_or_else(|| match self.props.scale.layout {
-                scale::Layout::Horizontal(_) => bounds.width,
-                scale::Layout::Vertical(_) => bounds.height,
-            });
-
-        let length = match self.props.scale.layout {
-            scale::Layout::Horizontal(_) => bounds.height,
-            scale::Layout::Vertical(_) => bounds.width,
-        };
+        let width = self.props.width;
 
         let graph = plot_scale(
             &self.props.scale,
-            offset,
-            range,
-            length,
+            &self.props.pixel_scale,
+            width,
             true,
             self.props.label_format.as_ref(),
         );

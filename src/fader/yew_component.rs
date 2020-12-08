@@ -93,9 +93,8 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq> Fader<FaderScale> {
         if let Some(elements) = &self.elements {
             let knob = &elements.knob;
             let value = self.props.fader.value;
-            let pixel_scale = &elements.pixel_scale;
-            let conv = (pixel_scale, &self.props.fader.scale);
-            let y = conv.convert_back(value);
+            let conv = (&self.props.fader.scale, &elements.pixel_scale);
+            let y = conv.convert(value);
             set_style(&knob, "top", &format!("{}px", y));
             self.update_tooltip();
         }
@@ -234,29 +233,13 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq> Fader<FaderScale> {
     fn knob_bounds(&self) -> Option<Bounds> {
         self.knob
             .cast::<Element>()
-            .map(|knob| knob.get_bounding_client_rect().into())
+            .map(|e| get_absolute_bounding_rect(&e))
     }
 
     fn background_bounds(&self) -> Option<Bounds> {
         self.background
             .cast::<Element>()
-            .map(|knob| knob.get_bounding_client_rect().into())
-    }
-
-    fn scale_bounds(&self) -> Option<Bounds> {
-        let knob_bounds = self.knob_bounds()?;
-        let background_bounds = self.background_bounds()?;
-        let scale_x = 0.0;
-        let scale_y = knob_bounds.height / 2.0;
-        let scale_width = background_bounds.width;
-        let scale_height = background_bounds.height - knob_bounds.height;
-
-        Some(Bounds {
-            x: scale_x,
-            y: scale_y,
-            width: scale_width,
-            height: scale_height,
-        })
+            .map(|e| get_absolute_bounding_rect(&e))
     }
 }
 
@@ -347,11 +330,21 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
         let label_format = self.scale_label_format.clone();
 
         let background = self.background.clone();
-        let scale_bounds = self.scale_bounds();
         let background_bounds = self.background_bounds();
 
-        let offset = scale_bounds.as_ref().map(|b| b.y);
-        let range = scale_bounds.as_ref().map(|b| b.height);
+        let scale = if let Some(elements) = self.elements.as_ref() {
+            let width = elements.bounds.width;
+            let pixel_scale = elements.scale_pixel_scale.clone();
+            html! {
+                <svg class="scale" width={background_bounds.as_ref().map(|b|b.width).unwrap_or(0.0)} height={background_bounds.as_ref().map(|b|b.height).unwrap_or(0.0)}>
+                    <scale::Scale<FaderScale> scale={scale} label_format={label_format} width={width} pixel_scale={pixel_scale} />
+                </svg>
+            }
+        } else {
+            html! {}
+        };
+
+        console_log!("updating fader...");
 
         html! {
             <div
@@ -363,9 +356,7 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
             >
                 <div class="fader-background" ref={background}>
                     <span class="track"></span>
-                    <svg class="scale" width={background_bounds.as_ref().map(|b|b.width).unwrap_or(0.0)} height={background_bounds.as_ref().map(|b|b.height).unwrap_or(0.0)}>
-                        <scale::Scale<FaderScale> scale={scale} label_format={label_format} bounds={background_bounds} offset={offset} range={range} />
-                    </svg>
+                    {scale}
                 </div>
                 <span class="knob" ref=self.knob.clone()></span>
                 {
@@ -387,27 +378,18 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
                 self.knob.cast::<HtmlElement>(),
             ) {
                 let tooltip = self.tooltip.cast::<HtmlElement>();
-                let rect = root.get_bounding_client_rect();
-
-                let bounds = Bounds {
-                    x: rect.x(),
-                    y: rect.y(),
-                    width: rect.width(),
-                    height: rect.height(),
-                };
-
-                let knob_rect = knob.get_bounding_client_rect();
-                let knob_bounds = Bounds {
-                    x: knob_rect.x(),
-                    y: knob_rect.y(),
-                    width: knob_rect.width(),
-                    height: knob_rect.height(),
-                };
+                let bounds = get_absolute_bounding_rect(&root);
+                let knob_bounds = get_absolute_bounding_rect(&knob);
 
                 let pixel_scale =
                     self.props
                         .fader
                         .pixel_scale(bounds.y, bounds.height, knob_bounds.height, true);
+
+                let offset = knob_bounds.height / 2.0;
+                console_log!("{}", offset);
+                let range = bounds.height - knob_bounds.height;
+                let scale_pixel_scale = LinearScale::inverted(offset, offset + range);
 
                 self.elements = Some(Elements {
                     knob,
@@ -415,11 +397,11 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
                     bounds,
                     knob_bounds,
                     pixel_scale,
+                    scale_pixel_scale,
                 });
             } else {
                 self.elements = None;
             }
-
             self.link.send_message(Msg::Refresh)
         }
 

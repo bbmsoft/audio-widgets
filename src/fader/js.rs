@@ -8,4 +8,5 @@ pub struct Elements {
     pub bounds: Bounds,
     pub knob_bounds: Bounds,
     pub pixel_scale: PixelScale,
+    pub scale_pixel_scale: PixelScale,
 }
