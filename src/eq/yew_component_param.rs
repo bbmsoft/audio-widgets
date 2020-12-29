@@ -77,6 +77,7 @@ pub enum Msg {
     TouchCancel(TouchEvent),
     Wheel(WheelEvent),
     Scroll(Event),
+    DoubleClick(MouseEvent),
     Refresh,
 }
 
@@ -141,6 +142,7 @@ impl Component for ParametricEq {
             Msg::TouchCancel(e) => self.handle_touch_cancel(e),
             Msg::Wheel(e) => self.handle_wheel(e),
             Msg::Scroll(e) => self.handle_scroll(e),
+            Msg::DoubleClick(e) => self.handle_double_click(e),
             Msg::Refresh => {
                 self.needs_refresh = false;
                 self.update_tooltip_content();
@@ -177,6 +179,7 @@ impl Component for ParametricEq {
         let right_click_callback = self.link.callback(|e| Msg::RightClick(e));
         let wheel_callback = self.link.callback(|e| Msg::Wheel(e));
         let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
+        let double_click_callback = self.link.callback(|e| Msg::DoubleClick(e));
 
         let bounds: Option<Bounds> = self
             .container
@@ -212,6 +215,7 @@ impl Component for ParametricEq {
                     oncontextmenu={right_click_callback}
                     onwheel={wheel_callback}
                     onscroll={scroll_callback}
+                    ondblclick={double_click_callback}
                     ref=self.canvas.clone()
                     width={width}
                     height={height}
@@ -377,6 +381,16 @@ impl ParametricEq {
     fn handle_scroll(&self, e: Event) {
         // prevent pull-to-refresh on mobile devices
         e.prevent_default();
+    }
+
+    fn handle_double_click(&self, e: MouseEvent) {
+        let x = e.offset_x() as f64;
+        let y = e.offset_y() as f64;
+
+        if let Some(band) = self.find_closest_band(x, y) {
+            self.update_internally(band, Parameter::Gain(0.0));
+            self.update_backend(band, Parameter::Gain(0.0));
+        }
     }
 
     fn handle_down(&mut self, x: f64, y: f64) {
