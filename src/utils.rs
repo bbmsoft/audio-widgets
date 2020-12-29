@@ -66,9 +66,7 @@ pub trait Ignore {
 }
 
 impl<E> Ignore for std::result::Result<(), E> {
-    fn ignore(self) {
-        ()
-    }
+    fn ignore(self) {}
 }
 
 #[cfg(test)]

@@ -7,7 +7,6 @@ pub fn plot_scale<S: scales::Scale<f64>>(
     scale: &ScaleModel<S>,
     pixel_scale: &LinearScale<f64>,
     length: f64,
-    invert_y: bool,
     label_format: Option<&LabelFormat>,
 ) -> ScaleGraph {
     let converter = (&scale.scale, pixel_scale);
@@ -49,7 +48,7 @@ pub fn plot_scale<S: scales::Scale<f64>>(
 }
 
 fn lines<S: scales::Scale<f64>>(
-    markers: &Vec<f64>,
+    markers: &[f64],
     converter: &(&S, &LinearScale<f64>),
     orientation: &Layout,
     length: f64,
@@ -86,7 +85,7 @@ fn line(
 }
 
 fn labels<S: scales::Scale<f64>>(
-    markers: &Vec<f64>,
+    markers: &[f64],
     converter: &(&S, &LinearScale<f64>),
     orientation: &Layout,
     length: f64,
@@ -134,17 +133,17 @@ fn label(
     }
 }
 
-fn pixel_scale_for_layout(
-    orientation: &Layout,
-    offset: f64,
-    range: f64,
-    invert_y: bool,
-) -> LinearScale<f64> {
-    let min = offset;
-    let max = offset + range;
-    match orientation {
-        Layout::Horizontal(_) => LinearScale::new(min, max),
-        Layout::Vertical(_) if invert_y => LinearScale::inverted(min, max),
-        Layout::Vertical(_) => LinearScale::new(min, max),
-    }
-}
+// fn pixel_scale_for_layout(
+//     orientation: &Layout,
+//     offset: f64,
+//     range: f64,
+//     invert_y: bool,
+// ) -> LinearScale<f64> {
+//     let min = offset;
+//     let max = offset + range;
+//     match orientation {
+//         Layout::Horizontal(_) => LinearScale::new(min, max),
+//         Layout::Vertical(_) if invert_y => LinearScale::inverted(min, max),
+//         Layout::Vertical(_) => LinearScale::new(min, max),
+//     }
+// }

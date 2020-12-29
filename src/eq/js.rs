@@ -107,7 +107,7 @@ impl CanvasEqRenderer {
                 let style = if *active {
                     self.style.band_fills[i]
                         .as_ref()
-                        .or(self.style.band_fill.as_ref())
+                        .or_else(|| self.style.band_fill.as_ref())
                 } else {
                     self.style.band_disabled_fill.as_ref()
                 };
@@ -135,7 +135,7 @@ impl CanvasEqRenderer {
         let stroke = if active {
             self.style.band_strokes[i]
                 .as_ref()
-                .or(self.style.band_stroke.as_ref())
+                .or_else(|| self.style.band_stroke.as_ref())
         } else {
             self.style.band_disabled_stroke.as_ref()
         };
@@ -143,7 +143,7 @@ impl CanvasEqRenderer {
     }
 }
 
-fn stroke_curve(curve: &Vec<(X, Y)>, context: &web_sys::CanvasRenderingContext2d) {
+fn stroke_curve(curve: &[(X, Y)], context: &web_sys::CanvasRenderingContext2d) {
     if curve.is_empty() {
         return;
     }

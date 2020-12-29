@@ -11,7 +11,7 @@ impl Component for EqView {
 
     type Properties = ();
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         EqView {
             link,
             eq: EqModel::default(),

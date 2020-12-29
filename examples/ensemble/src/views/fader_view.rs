@@ -15,12 +15,12 @@ impl Component for FaderView {
 
     type Properties = ();
 
-    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let eq = EqModel::graphic(10);
         FaderView { link, eq }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
         false
     }
 
@@ -30,7 +30,7 @@ impl Component for FaderView {
 
     fn view(&self) -> Html {
         let eq = self.eq.clone();
-        let on_input = Some(self.link.callback(|p| Msg::EqUpdate(p)));
+        let on_input = Some(self.link.callback(Msg::EqUpdate));
         let props = GraphicProps::regular(eq, on_input);
         html! {
             <div class="view fader-view">

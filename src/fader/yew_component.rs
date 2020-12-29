@@ -186,7 +186,7 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq> Fader<FaderScale> {
             let dampening = 2.0;
             let delta = e.delta_y().signum() * dampening;
             let new_g = conv.add_external_clamped(delta, g);
-            if new_g != g {
+            if (new_g - g).abs() > f64::EPSILON {
                 self.update_internally(new_g);
                 self.update_backend(new_g);
             }
@@ -206,10 +206,8 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq> Fader<FaderScale> {
             if e.client_y() as f64 > y {
                 self.link
                     .send_message(Msg::InternalUpdate(self.props.fader.min));
-            } else {
-                if let Some(default_val) = self.props.fader.scale.default_value {
-                    self.link.send_message(Msg::InternalUpdate(default_val));
-                }
+            } else if let Some(default_val) = self.props.fader.scale.default_value {
+                self.link.send_message(Msg::InternalUpdate(default_val));
             }
         }
     }
@@ -239,7 +237,7 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq> Fader<FaderScale> {
                 let y_conv = (pixel_scale, &self.props.fader.scale);
                 let gain = self.props.fader.value;
                 let new_g = y_conv.add_external_clamped(d_y, gain);
-                if new_g != gain {
+                if (new_g - gain).abs() > f64::EPSILON {
                     self.update_internally(new_g);
                     self.update_backend(new_g);
                 }
@@ -350,7 +348,7 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
         };
 
         Fader {
-            props: props.clone(),
+            props,
             ext_props: None,
             link,
             root: NodeRef::default(),
@@ -403,15 +401,15 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
     fn view(&self) -> Html {
         let id = self.props.id.as_deref().unwrap_or("");
 
-        let mouse_down_callback = self.link.callback(|e| Msg::MouseDown(e));
-        let wheel_callback = self.link.callback(|e| Msg::Wheel(e));
-        let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
-        let double_click_callback = self.link.callback(|e| Msg::DoubleClick(e));
+        let mouse_down_callback = self.link.callback(Msg::MouseDown);
+        let wheel_callback = self.link.callback(Msg::Wheel);
+        let scroll_callback = self.link.callback(Msg::Scroll);
+        let double_click_callback = self.link.callback(Msg::DoubleClick);
 
-        let touch_start_callback = self.link.callback(|e| Msg::TouchStart(e));
-        let touch_end_callback = self.link.callback(|e| Msg::TouchEnd(e));
-        let touch_move_callback = self.link.callback(|e| Msg::TouchMove(e));
-        let touch_cancel_callback = self.link.callback(|e| Msg::TouchCancel(e));
+        let touch_start_callback = self.link.callback(Msg::TouchStart);
+        let touch_end_callback = self.link.callback(Msg::TouchEnd);
+        let touch_move_callback = self.link.callback(Msg::TouchMove);
+        let touch_cancel_callback = self.link.callback(Msg::TouchCancel);
 
         let scale = self.props.fader.scale.clone();
         let label_format = self.scale_label_format.clone();

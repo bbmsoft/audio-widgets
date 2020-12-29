@@ -157,11 +157,9 @@ impl Component for ParametricEq {
         // don't accept external changes while the EQ widget is being used
         if self.active_band.is_some() {
             self.ext_props = Some(props);
-        } else {
-            if props != self.props {
-                self.props = props;
-                self.request_refresh();
-            }
+        } else if props != self.props {
+            self.props = props;
+            self.request_refresh();
         }
         false
     }
@@ -169,17 +167,17 @@ impl Component for ParametricEq {
     fn view(&self) -> Html {
         let id = self.props.id.as_deref().unwrap_or("");
 
-        let mouse_down_callback = self.link.callback(|e| Msg::MouseDown(e));
+        let mouse_down_callback = self.link.callback(Msg::MouseDown);
 
-        let touch_start_callback = self.link.callback(|e| Msg::TouchStart(e));
-        let touch_end_callback = self.link.callback(|e| Msg::TouchEnd(e));
-        let touch_move_callback = self.link.callback(|e| Msg::TouchMove(e));
-        let touch_cancel_callback = self.link.callback(|e| Msg::TouchCancel(e));
+        let touch_start_callback = self.link.callback(Msg::TouchStart);
+        let touch_end_callback = self.link.callback(Msg::TouchEnd);
+        let touch_move_callback = self.link.callback(Msg::TouchMove);
+        let touch_cancel_callback = self.link.callback(Msg::TouchCancel);
 
-        let right_click_callback = self.link.callback(|e| Msg::RightClick(e));
-        let wheel_callback = self.link.callback(|e| Msg::Wheel(e));
-        let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
-        let double_click_callback = self.link.callback(|e| Msg::DoubleClick(e));
+        let right_click_callback = self.link.callback(Msg::RightClick);
+        let wheel_callback = self.link.callback(Msg::Wheel);
+        let scroll_callback = self.link.callback(Msg::Scroll);
+        let double_click_callback = self.link.callback(Msg::DoubleClick);
 
         let bounds: Option<Bounds> = self
             .container
@@ -360,7 +358,7 @@ impl ParametricEq {
         let x = e.offset_x() as f64;
         let y = e.offset_y() as f64;
 
-        let band = self.active_band.or(self.find_closest_band(x, y));
+        let band = self.active_band.or_else(|| self.find_closest_band(x, y));
 
         if let Some(band) = band {
             let eq = &self.props.eq;
@@ -369,7 +367,7 @@ impl ParametricEq {
                 let dampening = 0.5;
                 let delta = e.delta_y().signum() * dampening;
                 let new_q = q_conv.add_internal_clamped(delta, q);
-                if new_q != q {
+                if (new_q - q).abs() > f64::EPSILON {
                     self.update_internally(band, Parameter::Q(new_q));
                     self.update_backend(band, Parameter::Q(new_q));
                 }
@@ -420,12 +418,12 @@ impl ParametricEq {
         let new_f = x_conv.add_external_clamped(d_x, freq);
         let new_g = y_conv.add_external_clamped(d_y, gain);
 
-        if new_f != freq {
+        if (new_f - freq).abs() > f64::EPSILON {
             self.update_internally(band, Parameter::Frequency(new_f));
             self.update_backend(band, Parameter::Frequency(new_f));
         }
 
-        if new_g != gain {
+        if (new_g - gain).abs() > f64::EPSILON {
             self.update_internally(band, Parameter::Gain(new_g));
             self.update_backend(band, Parameter::Gain(new_g));
         }

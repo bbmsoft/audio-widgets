@@ -46,7 +46,6 @@ impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Comp
             &self.props.scale,
             &self.props.pixel_scale,
             width,
-            true,
             self.props.label_format.as_ref(),
         );
 
@@ -55,7 +54,7 @@ impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Comp
                 .props
                 .scale
                 .default_value
-                .map_or(false, |v| v == l.value);
+                .map_or(false, |v| (v - l.value).abs() < f64::EPSILON);
             if is_default {
                 (l, "major-scale default-value")
             } else {
@@ -69,7 +68,7 @@ impl<S: scales::Scale<f64> + Clone + PartialEq + std::fmt::Debug + 'static> Comp
                 .props
                 .scale
                 .default_value
-                .map_or(false, |v| v == l.value);
+                .map_or(false, |v| (v - l.value).abs() < f64::EPSILON);
             let class = if is_default {
                 "scale-label default-value-label"
             } else {

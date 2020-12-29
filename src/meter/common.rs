@@ -1,5 +1,4 @@
 use crate::*;
-use scales::prelude::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MeterModel {

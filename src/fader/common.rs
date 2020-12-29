@@ -16,7 +16,7 @@ impl<S: Scale<f64>> FaderModel<S> {
         FaderModel {
             min: scale.min(),
             max: scale.max(),
-            value: scale.default_value.unwrap_or(scale.min()),
+            value: scale.default_value.unwrap_or_else(|| scale.min()),
             scale,
         }
     }

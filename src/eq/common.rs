@@ -93,7 +93,7 @@ impl EqModel {
         }
 
         let band = self.bands[index].to_owned();
-        if let Some(new_band) = update_band(band.clone(), change) {
+        if let Some(new_band) = update_band(band, change) {
             self.bands
                 .splice(index..index + 1, std::iter::once(new_band));
         }
@@ -356,7 +356,7 @@ fn update_band(band: (EqBand, bool), change: Parameter) -> Option<(EqBand, bool)
     }
 }
 
-fn filter<'a>(markers: &[f64], min: f64, max: f64, incl: bool) -> Vec<f64> {
+fn filter(markers: &[f64], min: f64, max: f64, incl: bool) -> Vec<f64> {
     let iter = markers.iter();
     if incl {
         iter.filter_map(|m| {

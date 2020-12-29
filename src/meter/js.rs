@@ -118,7 +118,7 @@ impl CanvasMeterRenderer {
         }
 
         if self.draw_peak {
-            if meter.peak == meter.max {
+            if (meter.peak - meter.max).abs() < f64::EPSILON {
                 set_fill(context, self.style.clip_fill.as_ref());
             } else if meter.peak > self.warning_threshold {
                 set_fill(context, self.style.warning_fill.as_ref());

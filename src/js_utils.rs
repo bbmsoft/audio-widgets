@@ -14,7 +14,7 @@ pub fn get_style(
         .get_property_value(style_name.as_ref())
         .ok()
         .and_then(|v| if v.is_empty() { None } else { Some(v) });
-    prop.or(default.map(|s| s.to_owned()))
+    prop.or_else(|| default.map(|s| s.to_owned()))
 }
 
 pub fn set_fill(context: &CanvasRenderingContext2d, style: Option<impl AsRef<str>>) {
@@ -58,7 +58,7 @@ pub fn set_style(element: &HtmlElement, key: &str, value: &str) {
     element.style().set_property(key, value).ignore();
 }
 
-pub fn register_global_listener(event_type: &str, listener: &Closure<dyn Fn(MouseEvent) -> ()>) {
+pub fn register_global_listener(event_type: &str, listener: &Closure<dyn Fn(MouseEvent)>) {
     let doc = document();
     doc.add_event_listener_with_callback(event_type, listener.as_ref().unchecked_ref())
         .expect("registering listener failed");
