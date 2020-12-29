@@ -1,0 +1,21 @@
+version: "2"
+
+services:
+  nginx:
+    build: .
+    restart: always
+    ports:
+      - 8081:80
+    environment:
+      - VIRTUAL_HOST=ensemble.bbmsoft.net
+      - VIRTUAL_PORT=8081
+      - LETSENCRYPT_HOST=ensemble.bbmsoft.net
+      - LETSENCRYPT_EMAIL=mbachmann@bbmsoft.net
+    networks:
+      - proxy-tier
+      - default
+
+networks:
+  proxy-tier:
+    external:
+      name: nextcloud_proxy-tier
