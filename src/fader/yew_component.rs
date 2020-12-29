@@ -24,6 +24,8 @@ pub struct Fader<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> {
     needs_layout: bool,
     background: NodeRef,
     scale_label_format: Option<LabelFormat>,
+    last_touch: Option<Y>,
+    touch_interrupted: bool,
 }
 
 #[derive(Derivative, Properties)]
@@ -71,6 +73,10 @@ pub enum Msg {
     Wheel(WheelEvent),
     Scroll(Event),
     DoubleClick(MouseEvent),
+    TouchStart(TouchEvent),
+    TouchEnd(TouchEvent),
+    TouchMove(TouchEvent),
+    TouchCancel(TouchEvent),
     Layout,
     InternalUpdate(FaderValue),
     Refresh,
@@ -116,6 +122,59 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq> Fader<FaderScale> {
     fn handle_mouse_move(&mut self, e: MouseEvent) {
         let d_y = e.movement_y() as f64;
         self.handle_move(d_y);
+    }
+
+    fn handle_touch_start(&mut self, e: TouchEvent) {
+        // TODO support multitouch?
+        if e.target_touches().length() != 1 {
+            self.touch_interrupted = true;
+            return;
+        }
+
+        let touches = e.changed_touches();
+
+        if let Some(touch) = touches.get(0) {
+            self.touch_interrupted = false;
+            let y = touch.client_y() as f64;
+            self.last_touch = Some(y);
+            self.handle_down();
+        }
+    }
+
+    fn handle_touch_end(&mut self, e: TouchEvent) {
+        // TODO support multitouch?
+        if e.target_touches().length() != 0 {
+            return;
+        }
+
+        self.handle_up();
+    }
+
+    fn handle_touch_move(&mut self, e: TouchEvent) {
+        // TODO support multitouch?
+        if e.target_touches().length() != 1 || self.touch_interrupted {
+            return;
+        }
+
+        let touches = e.changed_touches();
+
+        if let Some(touch) = touches.get(0) {
+            let y = touch.client_y() as f64;
+            if let Some(last_y) = self.last_touch {
+                let d_y = y - last_y;
+                self.handle_move(d_y);
+            }
+            self.last_touch = Some(y);
+        }
+    }
+
+    fn handle_touch_cancel(&mut self, e: TouchEvent) {
+        // TODO support multitouch?
+        if e.target_touches().length() != 0 {
+            return;
+        }
+
+        self.handle_up();
     }
 
     fn handle_wheel(&mut self, e: WheelEvent) {
@@ -303,6 +362,8 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
             needs_layout: false,
             background: NodeRef::default(),
             scale_label_format,
+            last_touch: None,
+            touch_interrupted: false,
         }
     }
 
@@ -314,6 +375,10 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
             Msg::Wheel(e) => self.handle_wheel(e),
             Msg::Scroll(e) => self.handle_scroll(e),
             Msg::DoubleClick(e) => self.handle_double_click(e),
+            Msg::TouchStart(e) => self.handle_touch_start(e),
+            Msg::TouchEnd(e) => self.handle_touch_end(e),
+            Msg::TouchMove(e) => self.handle_touch_move(e),
+            Msg::TouchCancel(e) => self.handle_touch_cancel(e),
             Msg::Layout => self.update_knob_position(),
             Msg::Refresh => {
                 return true;
@@ -343,6 +408,11 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
         let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
         let double_click_callback = self.link.callback(|e| Msg::DoubleClick(e));
 
+        let touch_start_callback = self.link.callback(|e| Msg::TouchStart(e));
+        let touch_end_callback = self.link.callback(|e| Msg::TouchEnd(e));
+        let touch_move_callback = self.link.callback(|e| Msg::TouchMove(e));
+        let touch_cancel_callback = self.link.callback(|e| Msg::TouchCancel(e));
+
         let scale = self.props.fader.scale.clone();
         let label_format = self.scale_label_format.clone();
 
@@ -371,6 +441,10 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
                 onwheel={wheel_callback}
                 onscroll={scroll_callback}
                 ondblclick={double_click_callback}
+                ontouchstart={touch_start_callback}
+                ontouchend={touch_end_callback}
+                ontouchmove={touch_move_callback}
+                ontouchcancel={touch_cancel_callback}
             >
                 <div class="fader-background" ref={background}>
                     <span class="track"></span>
