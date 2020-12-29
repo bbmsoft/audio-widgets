@@ -1,8 +1,8 @@
 version: "2"
 
 services:
-  nginx:
-    build: .
+  ensemble:
+    image: babymotte/ensemble
     restart: always
     ports:
       - 8081:80
