@@ -70,6 +70,7 @@ pub enum Msg {
     MouseMove(MouseEvent),
     Wheel(WheelEvent),
     Scroll(Event),
+    DoubleClick(MouseEvent),
     Layout,
     InternalUpdate(FaderValue),
     Refresh,
@@ -138,6 +139,20 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq> Fader<FaderScale> {
     fn handle_scroll(&self, e: Event) {
         // prevent pull-to-refresh on mobile devices
         e.prevent_default();
+    }
+
+    fn handle_double_click(&self, e: MouseEvent) {
+        if let Some(knob_bounds) = self.knob_bounds() {
+            let y = knob_bounds.y + knob_bounds.height / 2.0;
+            if e.client_y() as f64 > y {
+                self.link
+                    .send_message(Msg::InternalUpdate(self.props.fader.min));
+            } else {
+                if let Some(default_val) = self.props.fader.scale.default_value {
+                    self.link.send_message(Msg::InternalUpdate(default_val));
+                }
+            }
+        }
     }
 
     // TODO reset touched if window loses focus
@@ -298,6 +313,7 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
             Msg::MouseMove(e) => self.handle_mouse_move(e),
             Msg::Wheel(e) => self.handle_wheel(e),
             Msg::Scroll(e) => self.handle_scroll(e),
+            Msg::DoubleClick(e) => self.handle_double_click(e),
             Msg::Layout => self.update_knob_position(),
             Msg::Refresh => {
                 return true;
@@ -325,6 +341,7 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
         let mouse_down_callback = self.link.callback(|e| Msg::MouseDown(e));
         let wheel_callback = self.link.callback(|e| Msg::Wheel(e));
         let scroll_callback = self.link.callback(|e| Msg::Scroll(e));
+        let double_click_callback = self.link.callback(|e| Msg::DoubleClick(e));
 
         let scale = self.props.fader.scale.clone();
         let label_format = self.scale_label_format.clone();
@@ -353,6 +370,7 @@ impl<FaderScale: Scale<f64> + Debug + Clone + PartialEq + 'static> Component for
                 onmousedown={mouse_down_callback}
                 onwheel={wheel_callback}
                 onscroll={scroll_callback}
+                ondblclick={double_click_callback}
             >
                 <div class="fader-background" ref={background}>
                     <span class="track"></span>
